@@ -1,0 +1,171 @@
+---
+import Base from '../layouts/Base.astro'
+---
+
+<Base title="Privacy Policy" description="Privacy Policy for Safety as a Contact. How we collect, use, and protect your data.">
+
+  <section class="py-16 md:py-24">
+    <div class="max-w-3xl mx-auto px-4">
+      <h1 class="font-display font-bold text-3xl md:text-4xl text-slate-deep mb-2">Privacy Policy</h1>
+      <p class="text-iron/60 mb-10">Last updated: March 10, 2026</p>
+
+      <div class="prose-custom space-y-8">
+
+        <div>
+          <h2>Who We Are</h2>
+          <p>Safety as a Contact ("we," "us," "our") provides SMS-delivered behavioral safety coaching for construction workers. Our platform allows workers to text hazard observations and receive AI-powered safety coaching in return.</p>
+          <p>Contact us at: <a href="mailto:privacy@safetyasacontact.com">privacy@safetyasacontact.com</a></p>
+        </div>
+
+        <div>
+          <h2>Information We Collect</h2>
+          <h3>Information You Provide</h3>
+          <ul>
+            <li><strong>Phone number</strong> — required to send and receive SMS messages</li>
+            <li><strong>Name</strong> — optional; you may remain anonymous</li>
+            <li><strong>Email address</strong> — if you sign up via our website</li>
+            <li><strong>Company affiliation</strong> — to associate your observations with the correct safety program</li>
+            <li><strong>Trade and experience level</strong> — to calibrate coaching to your expertise</li>
+            <li><strong>Safety observations</strong> — the hazard descriptions you text to us</li>
+          </ul>
+
+          <h3>Information Collected Automatically</h3>
+          <ul>
+            <li><strong>Message metadata</strong> — timestamps, delivery status, message direction (inbound/outbound)</li>
+            <li><strong>Consent records</strong> — date, method, and content of your opt-in and any opt-out</li>
+            <li><strong>Engagement metrics</strong> — observation frequency, response patterns (aggregated, not individual tracking)</li>
+            <li><strong>Website analytics</strong> — standard web analytics (page views, referral source) when you visit our website</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>How We Use Your Information</h2>
+          <ul>
+            <li><strong>Deliver safety coaching</strong> — analyze your observation and provide relevant, trade-specific coaching via SMS</li>
+            <li><strong>Generate toolbox talks</strong> — aggregate observations (anonymized) into crew-level safety briefings</li>
+            <li><strong>Calculate engagement metrics</strong> — measure program effectiveness for your company's safety team</li>
+            <li><strong>Improve our coaching engine</strong> — refine AI coaching quality based on interaction patterns</li>
+            <li><strong>Comply with legal obligations</strong> — maintain consent records, respond to legal requests</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>SMS Communications</h2>
+          <p>Safety as a Contact sends SMS messages to provide workplace safety coaching, hazard observation acknowledgments, and toolbox talk notifications.</p>
+          <ul>
+            <li><strong>Data collected for SMS:</strong> Phone number, safety observations, message engagement, consent status</li>
+            <li><strong>How SMS data is used:</strong> To deliver targeted safety coaching, generate toolbox talks, and track engagement metrics</li>
+            <li><strong>Message frequency:</strong> Varies based on your activity. Up to 5 messages per day during business hours (8am-9pm your local time).</li>
+            <li><strong>Carrier charges:</strong> Message and data rates may apply per your mobile carrier</li>
+            <li><strong>Opt-out:</strong> Text STOP to any message to unsubscribe immediately. You will receive a confirmation and no further messages.</li>
+            <li><strong>Help:</strong> Text HELP or email <a href="mailto:support@safetyasacontact.com">support@safetyasacontact.com</a> for assistance</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Data Sharing</h2>
+          <p><strong>We do not sell, rent, or share your personal data with third parties for marketing purposes.</strong></p>
+          <p>We share data only in these limited circumstances:</p>
+          <ul>
+            <li><strong>Your employer (company admin)</strong> — aggregated, anonymized observation data and engagement metrics for safety program management. Individual observations are never attributed to named workers unless you choose to identify yourself.</li>
+            <li><strong>Service providers</strong> — Twilio (SMS delivery), Anthropic (AI coaching), and hosting providers, under strict data processing agreements</li>
+            <li><strong>Legal compliance</strong> — when required by law, court order, or government request</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Data Security</h2>
+          <ul>
+            <li>Phone numbers are hashed (SHA-256) for anonymous reporting</li>
+            <li>All data is encrypted in transit (TLS 1.3) and at rest</li>
+            <li>Database access is restricted with row-level security</li>
+            <li>No personally identifiable information (PII) appears in application logs</li>
+            <li>API keys and secrets are stored in encrypted environment variables, never in code</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Data Retention</h2>
+          <ul>
+            <li><strong>SMS consent records:</strong> Retained for 5 years per FCC and TCPA requirements</li>
+            <li><strong>Safety observations:</strong> Retained per your company's data retention policy</li>
+            <li><strong>Message logs:</strong> Retained for 3 years for compliance auditing</li>
+            <li><strong>Account data:</strong> Retained while your account is active; deleted within 90 days of account closure</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Your Rights</h2>
+          <p>You have the right to:</p>
+          <ul>
+            <li><strong>Opt out of SMS</strong> at any time by texting STOP</li>
+            <li><strong>Request your data</strong> — email us to receive a copy of your data</li>
+            <li><strong>Request deletion</strong> — email us to delete your data (subject to legal retention requirements)</li>
+            <li><strong>Correct your information</strong> — email us to update inaccurate data</li>
+            <li><strong>Report anonymously</strong> — you are never required to provide your name</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Children's Privacy</h2>
+          <p>Safety as a Contact is intended for use by adult workers (18+) in lawful employment. We do not knowingly collect information from anyone under 18.</p>
+        </div>
+
+        <div>
+          <h2>Changes to This Policy</h2>
+          <p>We may update this policy from time to time. We will notify active users via SMS of material changes. The "last updated" date at the top of this page reflects the most recent revision.</p>
+        </div>
+
+        <div>
+          <h2>Contact Us</h2>
+          <p>For privacy-related questions or requests:</p>
+          <ul>
+            <li>Email: <a href="mailto:privacy@safetyasacontact.com">privacy@safetyasacontact.com</a></li>
+            <li>Text HELP to our SMS number for support</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</Base>
+
+<style>
+  .prose-custom h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.375rem;
+    color: var(--color-slate-deep);
+    margin-bottom: 0.5rem;
+  }
+  .prose-custom h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--color-slate-deep);
+    margin-top: 1rem;
+    margin-bottom: 0.375rem;
+  }
+  .prose-custom p {
+    color: var(--color-iron);
+    line-height: 1.7;
+    margin-bottom: 0.5rem;
+  }
+  .prose-custom ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    color: var(--color-iron);
+    line-height: 1.7;
+  }
+  .prose-custom li {
+    margin-bottom: 0.25rem;
+  }
+  .prose-custom a {
+    color: var(--color-blue-crew);
+    text-decoration: underline;
+  }
+  .prose-custom a:hover {
+    color: var(--color-amber);
+  }
+</style>

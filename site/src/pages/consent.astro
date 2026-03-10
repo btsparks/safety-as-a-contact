@@ -1,0 +1,139 @@
+---
+import Base from '../layouts/Base.astro'
+---
+
+<Base title="Request Early Access" description="Sign up for early access to Safety as a Contact. SMS-based safety coaching for construction.">
+
+  <section class="py-16 md:py-24">
+    <div class="max-w-2xl mx-auto px-4">
+      <div class="text-center mb-10">
+        <h1 class="font-display font-bold text-3xl md:text-4xl text-slate-deep mb-4">Request Early Access</h1>
+        <p class="text-iron text-lg">
+          We're launching with a small group of construction companies. Sign up below and we'll reach out to get you started.
+        </p>
+      </div>
+
+      <form id="consent-form" class="bg-white rounded-xl shadow-sm p-8 space-y-6">
+        <div>
+          <label for="name" class="block text-sm font-medium text-slate-deep mb-1">Your name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="e.g. Mike Torres"
+            class="w-full px-4 py-3 rounded-lg border border-iron/20 focus:border-amber focus:ring-2 focus:ring-amber/20 outline-none transition-colors"
+          />
+        </div>
+
+        <div>
+          <label for="company" class="block text-sm font-medium text-slate-deep mb-1">Company name <span class="text-red-caution">*</span></label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            required
+            placeholder="e.g. Acme Construction"
+            class="w-full px-4 py-3 rounded-lg border border-iron/20 focus:border-amber focus:ring-2 focus:ring-amber/20 outline-none transition-colors"
+          />
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-slate-deep mb-1">Email <span class="text-red-caution">*</span></label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            placeholder="mike@acmeconstruction.com"
+            class="w-full px-4 py-3 rounded-lg border border-iron/20 focus:border-amber focus:ring-2 focus:ring-amber/20 outline-none transition-colors"
+          />
+        </div>
+
+        <div>
+          <label for="phone" class="block text-sm font-medium text-slate-deep mb-1">Phone number <span class="text-red-caution">*</span></label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            required
+            placeholder="(555) 123-4567"
+            class="w-full px-4 py-3 rounded-lg border border-iron/20 focus:border-amber focus:ring-2 focus:ring-amber/20 outline-none transition-colors"
+          />
+        </div>
+
+        <div>
+          <label for="crew-size" class="block text-sm font-medium text-slate-deep mb-1">Approximate crew size</label>
+          <select
+            id="crew-size"
+            name="crew_size"
+            class="w-full px-4 py-3 rounded-lg border border-iron/20 focus:border-amber focus:ring-2 focus:ring-amber/20 outline-none transition-colors bg-white"
+          >
+            <option value="">Select...</option>
+            <option value="1-25">1-25 workers</option>
+            <option value="26-100">26-100 workers</option>
+            <option value="101-500">101-500 workers</option>
+            <option value="500+">500+ workers</option>
+          </select>
+        </div>
+
+        <div class="border-t border-iron/10 pt-6">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="sms-consent"
+              name="sms_consent"
+              required
+              class="mt-1 w-4 h-4 rounded border-iron/30 text-amber focus:ring-amber/20"
+            />
+            <span class="text-sm text-iron">
+              I agree to receive SMS messages from Safety as a Contact for safety coaching purposes. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out at any time. I have read and agree to the
+              <a href="/privacy" class="text-blue-crew underline hover:text-amber">Privacy Policy</a>,
+              <a href="/terms" class="text-blue-crew underline hover:text-amber">Terms of Service</a>, and
+              <a href="/sms-terms" class="text-blue-crew underline hover:text-amber">SMS Terms</a>.
+              <span class="text-red-caution">*</span>
+            </span>
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-amber hover:bg-amber-dark text-white font-display font-semibold px-8 py-4 rounded-lg text-lg transition-colors"
+        >
+          Request Early Access
+        </button>
+
+        <p class="text-xs text-iron/50 text-center">
+          Safety as a Contact will not share your phone number with third parties.
+          Your consent is not a condition of purchase.
+        </p>
+      </form>
+
+      <!-- Success state (hidden by default) -->
+      <div id="success-msg" class="hidden bg-white rounded-xl shadow-sm p-8 text-center">
+        <div class="w-16 h-16 bg-green-field/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-green-field" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 class="font-display font-bold text-2xl text-slate-deep mb-2">You're on the list.</h2>
+        <p class="text-iron mb-4">We'll reach out soon to get you started. In the meantime, save our number — you'll be texting us before you know it.</p>
+        <p class="text-iron/60 text-sm">Check your email for a confirmation.</p>
+      </div>
+    </div>
+  </section>
+
+</Base>
+
+<script>
+  const form = document.getElementById('consent-form') as HTMLFormElement
+  const success = document.getElementById('success-msg')
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault()
+
+    // In production, this would POST to the backend API
+    // For now, show success message
+    form.classList.add('hidden')
+    success?.classList.remove('hidden')
+  })
+</script>

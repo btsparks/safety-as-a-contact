@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-amber: #E8922A;
+  --color-amber-light: #F5C882;
+  --color-amber-dark: #C97A1E;
+  --color-slate-deep: #1E2A3B;
+  --color-slate-mid: #2A3A4E;
+  --color-concrete: #F2F0EC;
+  --color-green-field: #3A7D44;
+  --color-iron: #4A4A4A;
+  --color-red-caution: #C0392B;
+  --color-blue-crew: #2E6B8A;
+
+  --font-display: "DM Sans", sans-serif;
+  --font-body: "Inter", sans-serif;
+}

@@ -1,0 +1,91 @@
+---
+import '../styles/global.css'
+
+interface Props {
+  title: string
+  description?: string
+}
+
+const { title, description = 'SMS-delivered behavioral safety coaching for construction. Text a hazard, get coaching back.' } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <title>{title} | Safety as a Contact</title>
+  </head>
+  <body class="bg-concrete text-iron font-body antialiased">
+    <nav class="bg-slate-deep text-white">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <a href="/" class="font-display font-bold text-xl tracking-tight">
+          Safety <span class="text-amber">as a Contact</span>
+        </a>
+        <div class="hidden md:flex items-center gap-6 text-sm">
+          <a href="/#how-it-works" class="hover:text-amber transition-colors">How It Works</a>
+          <a href="/#features" class="hover:text-amber transition-colors">Features</a>
+          <a href="/consent" class="bg-amber hover:bg-amber-dark text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            Request Early Access
+          </a>
+        </div>
+        <button id="mobile-menu-btn" class="md:hidden text-white" aria-label="Open menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+      <div id="mobile-menu" class="md:hidden hidden bg-slate-mid px-4 pb-4">
+        <a href="/#how-it-works" class="block py-2 hover:text-amber transition-colors">How It Works</a>
+        <a href="/#features" class="block py-2 hover:text-amber transition-colors">Features</a>
+        <a href="/consent" class="block mt-2 bg-amber hover:bg-amber-dark text-white px-4 py-2 rounded-lg font-medium text-center transition-colors">
+          Request Early Access
+        </a>
+      </div>
+    </nav>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="bg-slate-deep text-white/70 py-12 mt-16">
+      <div class="max-w-6xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <p class="font-display font-bold text-white text-lg mb-2">Safety <span class="text-amber">as a Contact</span></p>
+            <p class="text-sm">Safety that texts back.</p>
+          </div>
+          <div>
+            <p class="font-medium text-white mb-2">Product</p>
+            <ul class="text-sm space-y-1">
+              <li><a href="/#how-it-works" class="hover:text-amber transition-colors">How It Works</a></li>
+              <li><a href="/#features" class="hover:text-amber transition-colors">Features</a></li>
+              <li><a href="/consent" class="hover:text-amber transition-colors">Early Access</a></li>
+            </ul>
+          </div>
+          <div>
+            <p class="font-medium text-white mb-2">Legal</p>
+            <ul class="text-sm space-y-1">
+              <li><a href="/privacy" class="hover:text-amber transition-colors">Privacy Policy</a></li>
+              <li><a href="/terms" class="hover:text-amber transition-colors">Terms of Service</a></li>
+              <li><a href="/sms-terms" class="hover:text-amber transition-colors">SMS Terms</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="border-t border-white/10 mt-8 pt-6 text-xs text-center">
+          <p>&copy; {new Date().getFullYear()} Safety as a Contact. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      const btn = document.getElementById('mobile-menu-btn')
+      const menu = document.getElementById('mobile-menu')
+      btn?.addEventListener('click', () => menu?.classList.toggle('hidden'))
+    </script>
+  </body>
+</html>

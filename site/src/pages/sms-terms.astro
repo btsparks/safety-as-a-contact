@@ -1,0 +1,155 @@
+---
+import Base from '../layouts/Base.astro'
+---
+
+<Base title="SMS Terms & Conditions" description="SMS Terms and Conditions for Safety as a Contact. Message frequency, opt-out, and carrier information.">
+
+  <section class="py-16 md:py-24">
+    <div class="max-w-3xl mx-auto px-4">
+      <h1 class="font-display font-bold text-3xl md:text-4xl text-slate-deep mb-2">SMS Terms & Conditions</h1>
+      <p class="text-iron/60 mb-10">Last updated: March 10, 2026</p>
+
+      <div class="prose-custom space-y-8">
+
+        <div>
+          <h2>Program Description</h2>
+          <p>Safety as a Contact provides SMS-based workplace safety coaching for construction workers. When you opt in, you can text hazard observations and receive AI-powered coaching responses, safety reminders, and toolbox talk notifications via text message.</p>
+        </div>
+
+        <div>
+          <h2>Consent & Opt-In</h2>
+          <p>By texting our number and replying YES to our confirmation message, or by submitting the consent form on our website, you expressly consent to receive SMS messages from Safety as a Contact, including:</p>
+          <ul>
+            <li>Coaching responses to your hazard observations</li>
+            <li>Safety reminders and shift-start nudges</li>
+            <li>Toolbox talk notifications</li>
+            <li>Confirmation messages about your observations</li>
+          </ul>
+          <p><strong>Consent is not a condition of purchase or employment.</strong> You may opt out at any time.</p>
+        </div>
+
+        <div>
+          <h2>Message Frequency</h2>
+          <p>Message frequency varies based on your activity:</p>
+          <ul>
+            <li><strong>Coaching responses:</strong> 1 response per observation you send</li>
+            <li><strong>Safety nudges:</strong> Up to 1 per day (shift-start reminders)</li>
+            <li><strong>Toolbox talk notifications:</strong> Up to 1 per day</li>
+            <li><strong>Confirmation messages:</strong> Occasional, when your observation is used in a toolbox talk</li>
+          </ul>
+          <p><strong>Maximum: 5 messages per day</strong> during business hours (8:00 AM - 9:00 PM your local time). We will never text you outside these hours.</p>
+        </div>
+
+        <div>
+          <h2>Opt-Out</h2>
+          <p>You can opt out at any time by texting any of the following keywords to our number:</p>
+          <ul>
+            <li><strong>STOP</strong></li>
+            <li><strong>STOPALL</strong></li>
+            <li><strong>UNSUBSCRIBE</strong></li>
+            <li><strong>CANCEL</strong></li>
+            <li><strong>END</strong></li>
+            <li><strong>QUIT</strong></li>
+          </ul>
+          <p>After opting out, you will receive a single confirmation message and no further messages. To re-subscribe, text <strong>START</strong> to our number.</p>
+        </div>
+
+        <div>
+          <h2>Help</h2>
+          <p>For support, text <strong>HELP</strong> to our number or email <a href="mailto:support@safetyasacontact.com">support@safetyasacontact.com</a>.</p>
+        </div>
+
+        <div>
+          <h2>Message & Data Rates</h2>
+          <p>Message and data rates may apply. Check with your mobile carrier for details about your text messaging plan. Safety as a Contact does not charge for sending or receiving messages, but your carrier may.</p>
+        </div>
+
+        <div>
+          <h2>Carriers</h2>
+          <p>Service is available on major U.S. carriers including AT&T, Verizon, T-Mobile, Sprint, and others. Carriers are not liable for delayed or undelivered messages.</p>
+        </div>
+
+        <div>
+          <h2>Privacy</h2>
+          <p>Your phone number and message content are handled in accordance with our <a href="/privacy">Privacy Policy</a>. Key points:</p>
+          <ul>
+            <li>We do not sell or share your phone number with third parties for marketing purposes</li>
+            <li>SMS consent records are retained for 5 years per FCC regulations</li>
+            <li>Your observations may be used (anonymized) to generate toolbox talks for your crew</li>
+            <li>You may report hazards anonymously — identification is never required</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Content</h2>
+          <p>Messages from Safety as a Contact contain workplace safety coaching and notifications. Messages are educational in nature and do not constitute:</p>
+          <ul>
+            <li>Legal advice</li>
+            <li>Professional safety consulting</li>
+            <li>OSHA compliance certification</li>
+            <li>Emergency response guidance</li>
+          </ul>
+          <p><strong>In an emergency, call 911.</strong></p>
+        </div>
+
+        <div>
+          <h2>Supported Languages</h2>
+          <p>Safety as a Contact supports English and Spanish. The coaching engine detects your language preference based on your messages and responds accordingly.</p>
+        </div>
+
+        <div>
+          <h2>Response Time</h2>
+          <p>Coaching responses are typically delivered within seconds of your text. However, we cannot guarantee response times due to carrier delays, network conditions, or system maintenance. Do not rely on SMS for time-sensitive safety alerts or emergencies.</p>
+        </div>
+
+        <div>
+          <h2>Changes to SMS Terms</h2>
+          <p>We may update these terms from time to time. Material changes will be communicated via SMS to active subscribers.</p>
+        </div>
+
+        <div>
+          <h2>Contact</h2>
+          <p>Safety as a Contact</p>
+          <ul>
+            <li>Email: <a href="mailto:support@safetyasacontact.com">support@safetyasacontact.com</a></li>
+            <li>Text HELP to our SMS number</li>
+            <li>Website: safetyasacontact.com</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</Base>
+
+<style>
+  .prose-custom h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.375rem;
+    color: var(--color-slate-deep);
+    margin-bottom: 0.5rem;
+  }
+  .prose-custom p {
+    color: var(--color-iron);
+    line-height: 1.7;
+    margin-bottom: 0.5rem;
+  }
+  .prose-custom ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    color: var(--color-iron);
+    line-height: 1.7;
+  }
+  .prose-custom li {
+    margin-bottom: 0.25rem;
+  }
+  .prose-custom a {
+    color: var(--color-blue-crew);
+    text-decoration: underline;
+  }
+  .prose-custom a:hover {
+    color: var(--color-amber);
+  }
+</style>
