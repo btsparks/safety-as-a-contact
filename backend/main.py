@@ -1,0 +1,46 @@
+"""FastAPI application entry point."""
+
+import logging
+import os
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+from backend.api.console import router as console_router
+from backend.api.health import router as health_router
+from backend.config import settings
+from backend.database import init_db
+from backend.logging_config import setup_logging
+from backend.sms.handler import router as sms_router
+
+setup_logging()
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="Safety as a Contact",
+    description="SMS-delivered behavioral safety coaching for construction",
+    version="0.2.0",
+)
+
+app.include_router(health_router)
+app.include_router(sms_router, prefix="/api/sms")
+app.include_router(console_router, prefix="/api/test")
+
+# Templates for console UI
+_template_dir = os.path.join(os.path.dirname(__file__), "templates")
+templates = Jinja2Templates(directory=_template_dir)
+
+
+@app.get("/console", response_class=HTMLResponse)
+async def console_page(request: Request):
+    """Serve the SMS test console (dev-only)."""
+    if settings.is_production:
+        return HTMLResponse(status_code=404, content="Not found")
+    return templates.TemplateResponse("console.html", {"request": request})
+
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+    logger.info("Database initialized, tables created")

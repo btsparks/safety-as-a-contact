@@ -15,7 +15,7 @@ SMS-delivered behavioral safety coaching for construction. Workers save a phone 
 
 ## Tech Stack
 
-- **Backend**: Python (Flask or FastAPI) + SQLAlchemy + PostgreSQL
+- **Backend**: Python 3.11+ / FastAPI / SQLAlchemy 2.0 / SQLite (dev) / PostgreSQL (prod)
 - **SMS**: Twilio Programmable Messaging (A2P 10DLC registered)
 - **AI**: Anthropic Claude API for coaching engine
 - **Frontend**: Astro + Tailwind CSS (marketing site + admin portal)
@@ -24,11 +24,12 @@ SMS-delivered behavioral safety coaching for construction. Workers save a phone 
 
 ## Key Commands
 
-- Run dev server: `npm run dev` (frontend) / `python -m flask run` (backend)
-- Run tests: `pytest` (backend) / `npm test` (frontend)
-- Type check: `mypy src/` (backend)
-- Lint: `ruff check src/` (backend) / `npm run lint` (frontend)
-- DB migrations: `flask db upgrade`
+- Run backend: `python run.py` → http://localhost:8000
+- Run frontend: `cd site && npm run dev` → http://localhost:4322
+- Run tests: `pytest tests/` (from project root, venv activated)
+- Run tests with coverage: `pytest --cov=backend tests/`
+- Health check: `curl localhost:8000/health`
+- Activate venv: `source venv/Scripts/activate` (Windows/Git Bash)
 
 ## Code Style
 
@@ -51,6 +52,19 @@ SMS-delivered behavioral safety coaching for construction. Workers save a phone 
 - Opt-out processing must happen within the same message session (immediate)
 - Spanish language support is a core requirement (not optional) — detect language, respond in kind
 - Consent flows, opt-out messages, and compliance text must work in both English and Spanish
+- Photo/MMS is the PRIMARY use case — text-only is the fallback, not the default
+- Every coaching interaction is a CONVERSATION (multi-turn), not a one-shot response
+- Each conversation thread is cataloged as a complete coaching session
+- The AI silently assesses worker progression — the worker NEVER experiences this as testing
+
+## Coaching Engine (CRITICAL — Read the Skill)
+
+The coaching engine is the core product. Before modifying ANY coaching logic,
+system prompts, response templates, or conversation flow, you MUST read:
+@.claude/skills/prompt-architecture/SKILL.md
+
+This is the source of truth for how the AI thinks, converses, and assesses.
+If it conflicts with any other document, the prompt architecture wins.
 
 ## Brand Voice (for any user-facing text)
 
@@ -74,40 +88,26 @@ SMS-delivered behavioral safety coaching for construction. Workers save a phone 
 ## Project Structure
 
 ```
-src/
-  api/              # Flask/FastAPI routes
-  models/           # SQLAlchemy models (workers, observations, consent, companies)
-  coaching/         # Behavioral coaching engine (THE core product logic)
-    engine.py       # Main coaching orchestrator
-    modes.py        # Alert, Validate, Nudge, Probe, Affirm response modes
-    trades.py       # Trade-specific calibration (12 trades)
-    prompts.py      # Claude API prompt templates
-  sms/              # Twilio integration layer
-    handler.py      # Inbound/outbound message processing
-    consent.py      # Consent management (opt-in/opt-out)
-    compliance.py   # TCPA/CTIA/A2P compliance checks
-  feedback/         # Feedback loop engine
-    toolbox.py      # Observation -> toolbox talk generation
-    nudges.py       # Proactive shift-start coaching nudges
-  portal/           # Admin portal backend
-docs/               # Product documentation
-  PRODUCT_VISION.md
-  ARCHITECTURE.md
-  DEVELOPMENT_PLAN.md
-  BEHAVIORAL_FRAMEWORK.md
-  BRAND_GUIDE.md
-  SMS_COMPLIANCE.md
-site/               # Astro marketing site + consent pages
-  src/pages/
-    index.astro     # Landing page
-    privacy.astro   # Privacy policy (required for A2P)
-    terms.astro     # Terms of service (required for A2P)
-    sms-terms.astro # SMS-specific terms (required for A2P)
-    consent.astro   # Web consent page
-tests/
-  test_coaching/    # Coaching engine tests
-  test_sms/         # SMS handling tests
-  test_compliance/  # Compliance verification tests
+backend/                  # FastAPI backend (Phase 2+)
+  main.py                 # App entry point, router wiring
+  config.py               # pydantic-settings from .env
+  database.py             # Engine, session, init_db()
+  models.py               # 6 SQLAlchemy models (companies, projects, workers, consent_records, observations, message_log)
+  logging_config.py       # Structured JSON logging
+  api/
+    health.py             # GET /health
+    deps.py               # Shared dependencies
+  sms/
+    handler.py            # POST /api/sms/inbound (Twilio webhook)
+    sender.py             # send_sms() with compliance checks
+    consent.py            # Opt-in/opt-out/verification
+    compliance.py         # Sending window, rate limits
+tests/                    # pytest test suite (48 tests, 88% coverage)
+docs/                     # Product documentation
+site/                     # Astro marketing site (Phase 1, deployed)
+run.py                    # Convenience launcher → localhost:8000
+requirements.txt          # Python dependencies
+pyproject.toml            # Project config + pytest settings
 ```
 
 ## Workflow

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMS Test Console — Safety as a Contact</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+    :root {
+      --amber: #E8922A;
+      --amber-light: #F5C882;
+      --slate: #1E2A3B;
+      --concrete: #F2F0EC;
+      --green: #3A7D44;
+      --iron: #4A4A4A;
+      --red: #C0392B;
+      --blue: #2E6B8A;
+      --white: #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--concrete);
+      color: var(--iron);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--slate);
+      color: var(--white);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    header h1 { font-size: 18px; font-weight: 700; }
+    header .badge {
+      background: var(--amber);
+      color: var(--slate);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left: Chat panel */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #ddd;
+      min-width: 0;
+    }
+
+    .phone-bar {
+      background: var(--white);
+      padding: 10px 16px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .phone-bar input {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      flex: 1;
+      max-width: 220px;
+    }
+
+    .phone-bar button {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: var(--white);
+      cursor: pointer;
+    }
+    .phone-bar button:hover { background: var(--concrete); }
+    .phone-bar .btn-danger { color: var(--red); border-color: var(--red); }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      cursor: pointer;
+      position: relative;
+      word-wrap: break-word;
+    }
+
+    .msg.inbound {
+      align-self: flex-start;
+      background: #E5E7EB;
+      color: var(--slate);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.outbound {
+      align-self: flex-end;
+      background: var(--amber);
+      color: var(--slate);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.outbound.system { background: #CBD5E1; }
+
+    .msg .time {
+      font-size: 10px;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    .msg.selected { outline: 2px solid var(--blue); }
+
+    .msg-type-badge {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+      margin-bottom: 2px;
+    }
+
+    .input-bar {
+      background: var(--white);
+      padding: 12px 16px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-bar input {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 10px 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      flex: 1;
+    }
+
+    .input-bar button {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      background: var(--amber);
+      color: var(--slate);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .input-bar button:hover { background: var(--amber-light); }
+    .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Right: Metadata panel */
+    .meta-panel {
+      width: 340px;
+      background: var(--white);
+      overflow-y: auto;
+      padding: 16px;
+      flex-shrink: 0;
+    }
+
+    .meta-panel h3 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--slate);
+      margin-bottom: 12px;
+    }
+
+    .meta-empty {
+      color: #999;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .meta-card {
+      background: var(--concrete);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .meta-card label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .meta-card .value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--slate);
+    }
+
+    .mode-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .mode-badge.alert { background: #FECDD3; color: var(--red); }
+    .mode-badge.validate { background: #D1FAE5; color: var(--green); }
+    .mode-badge.nudge { background: #FEF3C7; color: #92400E; }
+    .mode-badge.probe { background: #DBEAFE; color: var(--blue); }
+    .mode-badge.affirm { background: #E0E7FF; color: #4338CA; }
+
+    .severity-dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .severity-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ddd;
+    }
+
+    .severity-dot.active { background: var(--amber); }
+    .severity-dot.active.high { background: var(--red); }
+
+    .mock-indicator {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .mock-indicator.mock { background: #FEF3C7; color: #92400E; }
+    .mock-indicator.live { background: #D1FAE5; color: var(--green); }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .stat-box {
+      background: var(--concrete);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-box .num {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--slate);
+    }
+
+    .stat-box .lbl {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 768px) {
+      .main { flex-direction: column; }
+      .meta-panel { width: 100%; max-height: 300px; border-top: 1px solid #ddd; border-right: none; }
+      .chat-panel { border-right: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SMS Test Console</h1>
+    <span class="badge">DEV ONLY</span>
+  </header>
+
+  <div class="main">
+    <div class="chat-panel">
+      <div class="phone-bar">
+        <input type="text" id="phoneInput" value="+18015559999" placeholder="+1XXXXXXXXXX">
+        <button onclick="loadConversation()">Load</button>
+        <button class="btn-danger" onclick="resetData()">Reset All</button>
+        <button onclick="loadStats()">Stats</button>
+      </div>
+
+      <div class="messages" id="messagesContainer"></div>
+
+      <div class="input-bar" style="flex-wrap: wrap;">
+        <input type="text" id="imageInput" placeholder="Photo URL (optional)" style="flex: 0 0 100%; margin-bottom: 6px; font-size: 12px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; color: #888;">
+        <input type="text" id="messageInput" placeholder="Type an observation or send a photo..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <div class="meta-panel" id="metaPanel">
+      <h3>Message Details</h3>
+      <p class="meta-empty">Click a message to see metadata</p>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/test';
+    let selectedMsg = null;
+    let lastCoachingResult = null;
+
+    async function sendMessage() {
+      const phone = document.getElementById('phoneInput').value.trim();
+      const message = document.getElementById('messageInput').value.trim();
+      const imageUrl = document.getElementById('imageInput').value.trim();
+      if (!phone || (!message && !imageUrl)) return;
+
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+
+      try {
+        const payload = { phone, message: message || '(photo)' };
+        if (imageUrl) payload.image_url = imageUrl;
+
+        const resp = await fetch(`${API}/simulate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        // Show inbound bubble with correct action type from response
+        const inboundType = data.action || 'observation';
+        addBubble('inbound', message || '(photo)', inboundType, new Date().toISOString(), null, imageUrl);
+
+        // Show system response
+        const msgType = data.coaching_result ? 'coaching' : 'system';
+        addBubble('outbound', data.response_text, msgType, new Date().toISOString(), data);
+
+        lastCoachingResult = data.coaching_result || null;
+
+        document.getElementById('messageInput').value = '';
+        document.getElementById('imageInput').value = '';
+      } catch (err) {
+        addBubble('outbound', 'Error: ' + err.message, 'system', new Date().toISOString());
+      }
+
+      sendBtn.disabled = false;
+      document.getElementById('messageInput').focus();
+    }
+
+    function addBubble(direction, text, type, time, metadata, imageUrl) {
+      const container = document.getElementById('messagesContainer');
+      const div = document.createElement('div');
+      div.className = `msg ${direction}${type === 'system' || type === 'consent' ? ' system' : ''}`;
+
+      const typeBadge = `<div class="msg-type-badge">${type}</div>`;
+      const timeStr = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let photoHtml = '';
+      if (imageUrl) {
+        photoHtml = `<div style="margin: 4px 0;"><img src="${imageUrl}" alt="MMS photo" style="max-width: 200px; max-height: 150px; border-radius: 8px; display: block;" onerror="this.outerHTML='<div style=\\'background:#ddd;padding:8px;border-radius:8px;font-size:12px;color:#666\\'>📷 Photo attached</div>'"></div>`;
+      }
+
+      div.innerHTML = `${typeBadge}${photoHtml}${text}<div class="time">${timeStr}</div>`;
+
+      if (metadata) {
+        div.onclick = () => showMetadata(metadata, div);
+      }
+
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function showMetadata(data, msgEl) {
+      // Deselect previous
+      document.querySelectorAll('.msg.selected').forEach(m => m.classList.remove('selected'));
+      if (msgEl) msgEl.classList.add('selected');
+
+      const panel = document.getElementById('metaPanel');
+      let html = '<h3>Message Details</h3>';
+
+      html += `<div class="meta-card"><label>Action</label><div class="value">${data.action}</div></div>`;
+
+      if (data.coaching_result) {
+        const cr = data.coaching_result;
+
+        html += `<div class="meta-card"><label>Coaching Mode</label><div class="value"><span class="mode-badge ${cr.response_mode}">${cr.response_mode}</span></div></div>`;
+
+        html += `<div class="meta-card"><label>Hazard Category</label><div class="value">${cr.hazard_category}</div></div>`;
+
+        // Severity dots
+        let dots = '';
+        for (let i = 1; i <= 5; i++) {
+          const active = i <= cr.severity ? 'active' : '';
+          const high = cr.severity >= 4 && i <= cr.severity ? 'high' : '';
+          dots += `<div class="severity-dot ${active} ${high}"></div>`;
+        }
+        html += `<div class="meta-card"><label>Severity</label><div class="severity-dots">${dots}<span style="margin-left:6px;font-size:13px;">${cr.severity}/5</span></div></div>`;
+
+        html += `<div class="meta-card"><label>Language</label><div class="value">${cr.language === 'es' ? 'Spanish' : 'English'}</div></div>`;
+
+        html += `<div class="meta-card"><label>Model</label><div class="value"><span class="mock-indicator ${cr.is_mock ? 'mock' : 'live'}">${cr.is_mock ? 'MOCK' : 'LIVE'}</span> ${cr.model_used}</div></div>`;
+
+        if (cr.has_photo) {
+          html += `<div class="meta-card"><label>Photo</label><div class="value">📷 Photo analyzed</div></div>`;
+        }
+
+        if (cr.turn_number) {
+          html += `<div class="meta-card"><label>Turn</label><div class="value">${cr.turn_number} (Session #${cr.session_id || '—'})</div></div>`;
+        }
+
+        html += `<div class="meta-card"><label>Tokens</label><div class="value">${cr.prompt_tokens} in / ${cr.completion_tokens} out</div></div>`;
+
+        html += `<div class="meta-card"><label>Latency</label><div class="value">${cr.latency_ms}ms</div></div>`;
+      }
+
+      panel.innerHTML = html;
+    }
+
+    async function loadConversation() {
+      const phone = document.getElementById('phoneInput').value.trim();
+      if (!phone) return;
+
+      try {
+        const resp = await fetch(`${API}/conversation/${encodeURIComponent(phone)}`);
+        const data = await resp.json();
+
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '';
+
+        data.messages.forEach(msg => {
+          addBubble(msg.direction, msg.content_preview, msg.message_type, msg.created_at);
+        });
+      } catch (err) {
+        console.error('Failed to load conversation:', err);
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const resp = await fetch(`${API}/stats`);
+        const data = await resp.json();
+
+        const panel = document.getElementById('metaPanel');
+        let html = '<h3>Stats</h3>';
+
+        html += '<div class="stats-bar">';
+        html += `<div class="stat-box"><div class="num">${data.total_messages}</div><div class="lbl">Messages</div></div>`;
+        html += `<div class="stat-box"><div class="num">${data.total_observations}</div><div class="lbl">Observations</div></div>`;
+        html += `<div class="stat-box"><div class="num">${data.total_coaching_responses}</div><div class="lbl">Coached</div></div>`;
+        html += '</div>';
+
+        html += `<div class="meta-card" style="margin-top:12px"><label>Avg Latency</label><div class="value">${data.avg_latency_ms}ms</div></div>`;
+
+        if (Object.keys(data.mode_distribution).length > 0) {
+          html += '<div class="meta-card"><label>Mode Distribution</label>';
+          for (const [mode, count] of Object.entries(data.mode_distribution)) {
+            html += `<div style="margin:4px 0"><span class="mode-badge ${mode}">${mode}</span> <span style="font-size:13px">${count}</span></div>`;
+          }
+          html += '</div>';
+        }
+
+        html += `<div class="meta-card"><label>Compliance Blocks</label><div class="value">${data.compliance_blocks}</div></div>`;
+
+        panel.innerHTML = html;
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+    }
+
+    async function resetData() {
+      if (!confirm('Clear all test data?')) return;
+      try {
+        await fetch(`${API}/reset`, { method: 'DELETE' });
+        document.getElementById('messagesContainer').innerHTML = '';
+        document.getElementById('metaPanel').innerHTML = '<h3>Message Details</h3><p class="meta-empty">Data cleared</p>';
+      } catch (err) {
+        console.error('Failed to reset:', err);
+      }
+    }
+
+    // Focus message input on load
+    document.getElementById('messageInput').focus();
+  </script>
+</body>
+</html>
