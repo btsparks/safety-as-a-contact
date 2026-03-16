@@ -8,6 +8,7 @@ os.environ["ENVIRONMENT"] = "development"
 os.environ["PHONE_HASH_SALT"] = "test-salt"
 os.environ["TWILIO_ACCOUNT_SID"] = ""
 os.environ["TWILIO_AUTH_TOKEN"] = ""
+os.environ["ANTHROPIC_API_KEY"] = ""  # Force mock mode in tests
 
 import pytest
 from fastapi.testclient import TestClient

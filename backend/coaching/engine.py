@@ -19,6 +19,13 @@ from backend.coaching.prompts import (
     build_user_message,
 )
 from backend.coaching.trades import get_trade_profile
+from backend.coaching.profile import (
+    generate_mentor_notes,
+    get_or_create_profile,
+    save_interaction_assessment,
+    should_regenerate_notes,
+    update_worker_profile,
+)
 from backend.models import CoachingResponse, CoachingSession, Observation, utcnow
 
 logger = logging.getLogger(__name__)
@@ -212,59 +219,65 @@ _KEYWORD_HAZARDS: list[tuple[list[str], str, int, str]] = [
 ]
 
 
-# Mock responses rewritten to follow SafetyTAP framework:
+# Mock responses — professional tone, photo-first workflow.
 # - Question-first (3:1 ratio)
 # - Specific, not generic
 # - No corporate language, no brand sign-off
 # - ONE observation, invites reply
-# - Peer voice
+# - Professional but approachable voice
 
 _MOCK_RESPONSES: dict[str, list[str]] = {
     "alert": [
-        "That wall's bowing. Get everyone back 20 feet. Don't go near it until it's shored.",
+        "That wall is bowing. Get everyone back 20 feet. Do not go near it until it is shored.",
         "Exposed line right there. Kill the power before anyone touches that panel.",
-        "That trench has no box past the bend. Nobody goes in until it's shored.",
+        "That trench has no box past the bend. Nobody goes in until it is shored.",
     ],
     "validate": [
-        "Trust that gut — that IS too close without a line. What's your plan to flag it for the crew?",
-        "Good call on that one. Most people walk right past it. How are you going to keep others back?",
-        "That's a real catch. What tipped you off?",
+        "Trust that instinct — that is too close without a line. What is your plan to flag it for the crew?",
+        "Good call on that one. Most people walk right past it. How are you keeping others back?",
+        "That is a real catch. What tipped you off?",
     ],
     "nudge": [
-        "Pour setup looks dialed in. What's the plan for those cords if that area takes on more water?",
-        "Solid housekeeping on the deck. What about that material stack — anything shifting?",
-        "Nice staging. What happens to this area when the crane starts swinging loads this afternoon?",
+        "Pour setup looks solid. What is the plan for those cords if that area takes on water?",
+        "Housekeeping on the deck looks good. What about that material stack — anything shifting?",
+        "Staging looks right. What happens to this area when the crane starts swinging loads this afternoon?",
     ],
     "probe": [
-        "That's a busy site — what's happening right behind where you took this?",
+        "Busy site — what is happening right behind where you took this?",
         "Deck looks clean. What changes here later in the shift?",
-        "Everything looks set. What's the weather doing to this area by end of day?",
+        "Everything looks set. What is the weather doing to this area by end of day?",
     ],
     "affirm": [
-        "Barricade placement is textbook — keeps foot traffic clear of the swing radius. Sharp.",
-        "Clean layout, cords routed, materials staged right. That's how it's done.",
+        "Barricade placement is textbook — keeps foot traffic clear of the swing radius.",
+        "Clean layout, cords routed, materials staged right. That is how it is done.",
         "Solid eye. Stay sharp out there.",
     ],
 }
 
 _MOCK_PHOTO_RESPONSES: dict[str, list[str]] = {
     "alert": [
-        "That's an unguarded edge with foot traffic right there. Get a barricade up now.",
+        "Unguarded edge with foot traffic right there. Get a barricade up now.",
     ],
     "validate": [
-        "Right instinct — that setup doesn't look stable. What's your plan?",
+        "Right instinct — that setup does not look stable. What is your plan?",
     ],
     "nudge": [
-        "Work area looks good. What about the overhead — anything rigged above this spot?",
+        "Work area looks good. What about overhead — anything rigged above this spot?",
     ],
     "probe": [
-        "Lot going on in this shot. What part are you working on?",
-        "Which crew is on this? Helps to know the trade for a better read.",
+        "A lot going on here. What area are you working in and what is the project?",
+        "Which crew is on this? Knowing the trade helps give a better read.",
     ],
     "affirm": [
-        "Clean setup. Everything staged and routed. That's how you run a safe area.",
+        "Clean setup. Everything staged and routed properly.",
     ],
 }
+
+_MOCK_NO_PHOTO_RESPONSES: list[str] = [
+    "Send a photo of the area and let me know what you are working on.",
+    "Hard to give a good read without seeing it. Send a photo of what you are looking at.",
+    "Send a picture of the work area. That is the best way to talk through it.",
+]
 
 
 def _classify_mock(observation: str) -> tuple[str, int, str, str]:
@@ -291,6 +304,11 @@ def _generate_mock_response(
 ) -> str:
     """Generate a framework-compliant mock coaching response."""
     import random
+
+    # No photo on first turn — ask for one
+    if not has_photo and turn_number == 1:
+        idx = 0 % len(_MOCK_NO_PHOTO_RESPONSES)
+        return _MOCK_NO_PHOTO_RESPONSES[idx]
 
     if has_photo and mode in _MOCK_PHOTO_RESPONSES:
         responses = _MOCK_PHOTO_RESPONSES[mode]
@@ -385,6 +403,7 @@ def coach_live(
     thread_history: str = "",
     worker_tier: int = 1,
     preferred_language: str = "en",
+    mentor_notes: str = "",
 ) -> CoachingResult:
     """Live coaching via Claude API. Single call with full prompt architecture."""
     import anthropic
@@ -405,6 +424,7 @@ def coach_live(
         thread_history=thread_history,
         has_photo=has_photo,
         coaching_focus=profile["coaching_focus"],
+        mentor_notes=mentor_notes,
     )
 
     # Build user message with photo support
@@ -483,15 +503,37 @@ def run_coaching(
     """Run the coaching pipeline. Uses live mode if API key is set, mock otherwise.
 
     Manages conversation sessions, creates CoachingResponse records,
-    and updates Observation + CoachingSession metadata.
+    updates Observation + CoachingSession metadata, and maintains
+    the worker's longitudinal profile.
     """
+    # Resolve worker profile and tier
+    worker_profile = None
+    mentor_notes = ""
+    is_new_session = False
+
+    if phone_hash:
+        worker_profile = get_or_create_profile(db, phone_hash, worker_id)
+        worker_tier = worker_profile.current_tier
+        mentor_notes = worker_profile.mentor_notes or ""
+
     # Get or create conversation session
     session = None
     turn_number = 1
     thread_history = ""
 
     if phone_hash:
+        old_session_count = (
+            db.query(CoachingSession)
+            .filter(CoachingSession.phone_hash == phone_hash)
+            .count()
+        )
         session = get_or_create_session(db, phone_hash, worker_id, worker_tier)
+        new_session_count = (
+            db.query(CoachingSession)
+            .filter(CoachingSession.phone_hash == phone_hash)
+            .count()
+        )
+        is_new_session = new_session_count > old_session_count
         turn_number = session.turn_count
         thread_history = get_thread_history(db, session.id)
 
@@ -515,6 +557,7 @@ def run_coaching(
             thread_history=thread_history,
             worker_tier=worker_tier,
             preferred_language=preferred_language,
+            mentor_notes=mentor_notes,
         )
     else:
         logger.info("Coaching engine: mock mode, turn %d", turn_number)
@@ -557,5 +600,22 @@ def run_coaching(
     # Update session metadata
     if session:
         update_session_metadata(db, session, result, media_urls)
+
+    # Save interaction assessment and update profile
+    if phone_hash and worker_profile:
+        ia = save_interaction_assessment(
+            db,
+            phone_hash=phone_hash,
+            session_id=session.id if session else None,
+            observation_id=observation_id,
+            coaching_response_id=cr.id,
+            result=result,
+            observation_text=observation_text,
+        )
+        update_worker_profile(db, worker_profile, is_new_session)
+
+        # Regenerate mentor notes if needed
+        if should_regenerate_notes(worker_profile, ia):
+            generate_mentor_notes(db, worker_profile)
 
     return result

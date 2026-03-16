@@ -84,7 +84,7 @@
       max-width: 220px;
     }
 
-    .phone-bar button {
+    .phone-bar button, .context-bar button {
       font-family: 'Inter', sans-serif;
       font-size: 12px;
       padding: 6px 12px;
@@ -93,8 +93,62 @@
       background: var(--white);
       cursor: pointer;
     }
-    .phone-bar button:hover { background: var(--concrete); }
+    .phone-bar button:hover, .context-bar button:hover { background: var(--concrete); }
     .phone-bar .btn-danger { color: var(--red); border-color: var(--red); }
+
+    /* Worker context bar */
+    .context-bar {
+      background: var(--slate);
+      padding: 8px 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .context-bar label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94A3B8;
+      white-space: nowrap;
+    }
+
+    .context-bar select {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      padding: 4px 8px;
+      border: 1px solid #475569;
+      border-radius: 5px;
+      background: #334155;
+      color: var(--white);
+      cursor: pointer;
+    }
+
+    .context-bar select:focus { outline: 1px solid var(--amber); }
+
+    .context-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .tier-badge.t1 { background: #94A3B8; color: var(--white); }
+    .tier-badge.t2 { background: var(--blue); color: var(--white); }
+    .tier-badge.t3 { background: var(--amber); color: var(--slate); }
+    .tier-badge.t4 { background: var(--green); color: var(--white); }
 
     .messages {
       flex: 1;
@@ -182,7 +236,7 @@
 
     /* Right: Metadata panel */
     .meta-panel {
-      width: 340px;
+      width: 380px;
       background: var(--white);
       overflow-y: auto;
       padding: 16px;
@@ -196,6 +250,24 @@
       margin-bottom: 12px;
     }
 
+    .meta-section {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #E5E7EB;
+    }
+
+    .meta-section:last-child { border-bottom: none; }
+
+    .meta-section-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--amber);
+      margin-bottom: 8px;
+    }
+
     .meta-empty {
       color: #999;
       font-size: 13px;
@@ -206,24 +278,30 @@
     .meta-card {
       background: var(--concrete);
       border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
     }
 
     .meta-card label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: #888;
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .meta-card .value {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       color: var(--slate);
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
     .mode-badge {
@@ -257,6 +335,22 @@
     .severity-dot.active { background: var(--amber); }
     .severity-dot.active.high { background: var(--red); }
 
+    .specificity-bar {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .spec-block {
+      width: 28px;
+      height: 8px;
+      border-radius: 2px;
+      background: #E5E7EB;
+    }
+
+    .spec-block.active { background: var(--blue); }
+    .spec-block.active.high { background: var(--green); }
+
     .mock-indicator {
       display: inline-block;
       padding: 2px 8px;
@@ -266,6 +360,81 @@
     }
     .mock-indicator.mock { background: #FEF3C7; color: #92400E; }
     .mock-indicator.live { background: #D1FAE5; color: var(--green); }
+
+    .engagement-badge, .confidence-badge, .direction-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .engagement-badge.high { background: #D1FAE5; color: var(--green); }
+    .engagement-badge.medium { background: #FEF3C7; color: #92400E; }
+    .engagement-badge.low { background: #FECDD3; color: var(--red); }
+
+    .confidence-badge.confident { background: #D1FAE5; color: var(--green); }
+    .confidence-badge.uncertain { background: #FEF3C7; color: #92400E; }
+    .confidence-badge.resistant { background: #FECDD3; color: var(--red); }
+
+    .direction-badge.deeper { background: #DBEAFE; color: var(--blue); }
+    .direction-badge.broader { background: #E0E7FF; color: #4338CA; }
+    .direction-badge.close { background: #F3F4F6; color: #6B7280; }
+
+    .bool-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .bool-tag.yes { background: #D1FAE5; color: var(--green); }
+    .bool-tag.no { background: #F3F4F6; color: #9CA3AF; }
+
+    .mentor-notes {
+      background: #F8FAFC;
+      border-left: 3px solid var(--amber);
+      padding: 10px 12px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--iron);
+      font-style: italic;
+    }
+
+    .profile-tier-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tier-label { font-size: 12px; color: #64748B; }
+
+    .profile-stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .profile-stat {
+      background: var(--concrete);
+      border-radius: 6px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    .profile-stat .num {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--slate);
+    }
+
+    .profile-stat .lbl {
+      font-size: 9px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
     .stats-bar {
       display: grid;
@@ -315,12 +484,75 @@
         <button onclick="loadConversation()">Load</button>
         <button class="btn-danger" onclick="resetData()">Reset All</button>
         <button onclick="loadStats()">Stats</button>
+        <button onclick="loadProfile()">Profile</button>
+      </div>
+
+      <!-- Worker context controls -->
+      <div class="context-bar">
+        <div class="context-group">
+          <label>Trade</label>
+          <select id="tradeSelect">
+            <option value="">General</option>
+            <option value="ironworker">Ironworker</option>
+            <option value="carpenter">Carpenter</option>
+            <option value="electrician">Electrician</option>
+            <option value="plumber">Plumber</option>
+            <option value="laborer">Laborer</option>
+            <option value="operating_engineer">Operating Engineer</option>
+            <option value="cement_mason">Cement Mason</option>
+            <option value="roofer">Roofer</option>
+            <option value="sheet_metal">Sheet Metal</option>
+            <option value="painter">Painter</option>
+            <option value="insulator">Insulator</option>
+            <option value="scaffold_builder">Scaffold Builder</option>
+          </select>
+        </div>
+
+        <div class="context-group">
+          <label>Experience</label>
+          <select id="experienceSelect">
+            <option value="entry">Entry (0-2 yr)</option>
+            <option value="intermediate">Intermediate (2-8 yr)</option>
+            <option value="expert">Expert (8+ yr)</option>
+          </select>
+        </div>
+
+        <div class="context-group">
+          <label>Tier</label>
+          <select id="tierSelect">
+            <option value="">Auto</option>
+            <option value="1">1 — Developing</option>
+            <option value="2">2 — Building</option>
+            <option value="3">3 — Proficient</option>
+            <option value="4">4 — Mentor</option>
+          </select>
+        </div>
+
+        <div class="context-group">
+          <label>Lang</label>
+          <select id="langSelect">
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+          </select>
+        </div>
+
+        <div class="context-group" id="liveTierDisplay" style="margin-left: auto;">
+          <span class="tier-badge t1" id="tierBadge">1</span>
+          <span class="tier-label" id="tierText">Developing</span>
+        </div>
       </div>
 
       <div class="messages" id="messagesContainer"></div>
 
       <div class="input-bar" style="flex-wrap: wrap;">
-        <input type="text" id="imageInput" placeholder="Photo URL (optional)" style="flex: 0 0 100%; margin-bottom: 6px; font-size: 12px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; color: #888;">
+        <div style="flex: 0 0 100%; display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
+          <input type="text" id="imageInput" placeholder="Photo URL (optional)" style="flex: 1; font-size: 12px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; color: #888;">
+          <button onclick="randomPhoto()" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:6px 12px;background:var(--slate);color:var(--white);border:none;border-radius:6px;cursor:pointer;white-space:nowrap;" title="Load a random construction site photo from the test bank">Random Photo</button>
+        </div>
+        <div id="photoScenario" style="flex: 0 0 100%; display: none; margin-bottom: 6px; font-size: 11px; color: #64748B; padding: 0 4px;">
+          <span id="scenarioText"></span>
+          <span id="scenarioHazard" style="margin-left: 8px; background: #FEF3C7; color: #92400E; padding: 1px 6px; border-radius: 4px; font-weight: 500;"></span>
+        </div>
         <input type="text" id="messageInput" placeholder="Type an observation or send a photo..." onkeydown="if(event.key==='Enter')sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">Send</button>
       </div>
@@ -328,14 +560,39 @@
 
     <div class="meta-panel" id="metaPanel">
       <h3>Message Details</h3>
-      <p class="meta-empty">Click a message to see metadata</p>
+      <p class="meta-empty">Send a message to see coaching metadata, assessment scores, and worker profile data</p>
     </div>
   </div>
 
   <script>
     const API = '/api/test';
     let selectedMsg = null;
-    let lastCoachingResult = null;
+    let lastFullResponse = null;
+
+    const TIER_NAMES = { 1: 'Developing', 2: 'Building', 3: 'Proficient', 4: 'Mentor' };
+
+    function updateTierDisplay(tier) {
+      const badge = document.getElementById('tierBadge');
+      const text = document.getElementById('tierText');
+      badge.textContent = tier;
+      badge.className = `tier-badge t${tier}`;
+      text.textContent = TIER_NAMES[tier] || 'Unknown';
+    }
+
+    function getWorkerContext() {
+      const ctx = {};
+      const trade = document.getElementById('tradeSelect').value;
+      const exp = document.getElementById('experienceSelect').value;
+      const tier = document.getElementById('tierSelect').value;
+      const lang = document.getElementById('langSelect').value;
+
+      if (trade) ctx.trade = trade;
+      if (exp) ctx.experience_level = exp;
+      if (tier) ctx.tier_override = parseInt(tier);
+      if (lang) ctx.language = lang;
+
+      return ctx;
+    }
 
     async function sendMessage() {
       const phone = document.getElementById('phoneInput').value.trim();
@@ -347,7 +604,7 @@
       sendBtn.disabled = true;
 
       try {
-        const payload = { phone, message: message || '(photo)' };
+        const payload = { phone, message: message || '(photo)', ...getWorkerContext() };
         if (imageUrl) payload.image_url = imageUrl;
 
         const resp = await fetch(`${API}/simulate`, {
@@ -357,7 +614,7 @@
         });
         const data = await resp.json();
 
-        // Show inbound bubble with correct action type from response
+        // Show inbound bubble
         const inboundType = data.action || 'observation';
         addBubble('inbound', message || '(photo)', inboundType, new Date().toISOString(), null, imageUrl);
 
@@ -365,10 +622,16 @@
         const msgType = data.coaching_result ? 'coaching' : 'system';
         addBubble('outbound', data.response_text, msgType, new Date().toISOString(), data);
 
-        lastCoachingResult = data.coaching_result || null;
+        lastFullResponse = data;
+
+        // Update tier display from profile
+        if (data.worker_profile) {
+          updateTierDisplay(data.worker_profile.current_tier);
+        }
 
         document.getElementById('messageInput').value = '';
         document.getElementById('imageInput').value = '';
+        document.getElementById('photoScenario').style.display = 'none';
       } catch (err) {
         addBubble('outbound', 'Error: ' + err.message, 'system', new Date().toISOString());
       }
@@ -387,7 +650,7 @@
 
       let photoHtml = '';
       if (imageUrl) {
-        photoHtml = `<div style="margin: 4px 0;"><img src="${imageUrl}" alt="MMS photo" style="max-width: 200px; max-height: 150px; border-radius: 8px; display: block;" onerror="this.outerHTML='<div style=\\'background:#ddd;padding:8px;border-radius:8px;font-size:12px;color:#666\\'>📷 Photo attached</div>'"></div>`;
+        photoHtml = `<div style="margin: 4px 0;"><img src="${imageUrl}" alt="MMS photo" style="max-width: 200px; max-height: 150px; border-radius: 8px; display: block;" onerror="this.outerHTML='<div style=\\'background:#ddd;padding:8px;border-radius:8px;font-size:12px;color:#666\\'>Photo attached</div>'"></div>`;
       }
 
       div.innerHTML = `${typeBadge}${photoHtml}${text}<div class="time">${timeStr}</div>`;
@@ -401,21 +664,23 @@
     }
 
     function showMetadata(data, msgEl) {
-      // Deselect previous
       document.querySelectorAll('.msg.selected').forEach(m => m.classList.remove('selected'));
       if (msgEl) msgEl.classList.add('selected');
 
       const panel = document.getElementById('metaPanel');
-      let html = '<h3>Message Details</h3>';
+      let html = '';
 
-      html += `<div class="meta-card"><label>Action</label><div class="value">${data.action}</div></div>`;
-
+      // --- COACHING RESULT ---
       if (data.coaching_result) {
         const cr = data.coaching_result;
 
-        html += `<div class="meta-card"><label>Coaching Mode</label><div class="value"><span class="mode-badge ${cr.response_mode}">${cr.response_mode}</span></div></div>`;
+        html += '<div class="meta-section">';
+        html += '<div class="meta-section-title">Coaching Response</div>';
 
-        html += `<div class="meta-card"><label>Hazard Category</label><div class="value">${cr.hazard_category}</div></div>`;
+        html += `<div class="meta-card"><label>Mode</label><div class="value"><span class="mode-badge ${cr.response_mode}">${cr.response_mode}</span></div></div>`;
+
+        html += '<div class="meta-row">';
+        html += `<div class="meta-card"><label>Hazard</label><div class="value">${cr.hazard_category}</div></div>`;
 
         // Severity dots
         let dots = '';
@@ -424,23 +689,104 @@
           const high = cr.severity >= 4 && i <= cr.severity ? 'high' : '';
           dots += `<div class="severity-dot ${active} ${high}"></div>`;
         }
-        html += `<div class="meta-card"><label>Severity</label><div class="severity-dots">${dots}<span style="margin-left:6px;font-size:13px;">${cr.severity}/5</span></div></div>`;
+        html += `<div class="meta-card"><label>Severity</label><div class="severity-dots">${dots}<span style="margin-left:6px;font-size:12px;">${cr.severity}/5</span></div></div>`;
+        html += '</div>';
 
+        html += '<div class="meta-row">';
+        html += `<div class="meta-card"><label>Turn</label><div class="value">${cr.turn_number} <span style="font-size:11px;color:#888">(Session #${cr.session_id || '—'})</span></div></div>`;
         html += `<div class="meta-card"><label>Language</label><div class="value">${cr.language === 'es' ? 'Spanish' : 'English'}</div></div>`;
+        html += '</div>';
 
-        html += `<div class="meta-card"><label>Model</label><div class="value"><span class="mock-indicator ${cr.is_mock ? 'mock' : 'live'}">${cr.is_mock ? 'MOCK' : 'LIVE'}</span> ${cr.model_used}</div></div>`;
+        html += '<div class="meta-row">';
+        html += `<div class="meta-card"><label>Model</label><div class="value"><span class="mock-indicator ${cr.is_mock ? 'mock' : 'live'}">${cr.is_mock ? 'MOCK' : 'LIVE'}</span></div></div>`;
+        html += `<div class="meta-card"><label>Latency</label><div class="value">${cr.latency_ms}ms</div></div>`;
+        html += '</div>';
+
+        if (!cr.is_mock) {
+          html += `<div class="meta-card"><label>Tokens</label><div class="value">${cr.prompt_tokens} in / ${cr.completion_tokens} out</div></div>`;
+        }
+
+        html += '</div>';
+
+        // --- ASSESSMENT METADATA ---
+        html += '<div class="meta-section">';
+        html += '<div class="meta-section-title">AI Assessment (hidden from worker)</div>';
+
+        // Specificity bar
+        let specBlocks = '';
+        const specScore = cr.specificity_score || 0;
+        for (let i = 1; i <= 5; i++) {
+          const active = i <= specScore ? 'active' : '';
+          const high = specScore >= 4 && i <= specScore ? 'high' : '';
+          specBlocks += `<div class="spec-block ${active} ${high}"></div>`;
+        }
+        html += `<div class="meta-card"><label>Specificity</label><div class="specificity-bar">${specBlocks}<span style="margin-left:6px;font-size:12px;font-weight:600;">${specScore}/5</span></div></div>`;
+
+        html += '<div class="meta-row">';
+        const eng = cr.worker_engagement || '—';
+        html += `<div class="meta-card"><label>Engagement</label><div class="value"><span class="engagement-badge ${eng}">${eng}</span></div></div>`;
+
+        const conf = cr.worker_confidence || '—';
+        html += `<div class="meta-card"><label>Confidence</label><div class="value"><span class="confidence-badge ${conf}">${conf}</span></div></div>`;
+        html += '</div>';
+
+        html += '<div class="meta-row">';
+        const tm = cr.teachable_moment;
+        html += `<div class="meta-card"><label>Teachable Moment</label><div class="value"><span class="bool-tag ${tm ? 'yes' : 'no'}">${tm ? 'YES' : 'No'}</span></div></div>`;
+
+        const dir = cr.suggested_next_direction || '—';
+        html += `<div class="meta-card"><label>Next Direction</label><div class="value"><span class="direction-badge ${dir}">${dir}</span></div></div>`;
+        html += '</div>';
 
         if (cr.has_photo) {
-          html += `<div class="meta-card"><label>Photo</label><div class="value">📷 Photo analyzed</div></div>`;
+          html += `<div class="meta-card"><label>Photo</label><div class="value"><span class="bool-tag yes">Analyzed</span></div></div>`;
         }
 
-        if (cr.turn_number) {
-          html += `<div class="meta-card"><label>Turn</label><div class="value">${cr.turn_number} (Session #${cr.session_id || '—'})</div></div>`;
+        html += '</div>';
+      } else {
+        // Non-coaching action
+        html += '<div class="meta-section">';
+        html += `<div class="meta-card"><label>Action</label><div class="value">${data.action}</div></div>`;
+        html += '</div>';
+      }
+
+      // --- WORKER PROFILE ---
+      const wp = data.worker_profile;
+      if (wp) {
+        html += '<div class="meta-section">';
+        html += '<div class="meta-section-title">Worker Profile</div>';
+
+        // Tier display
+        const tierClass = `t${wp.current_tier}`;
+        html += `<div class="meta-card"><label>Tier</label><div class="profile-tier-display"><span class="tier-badge ${tierClass}">${wp.current_tier}</span> <span style="font-size:13px;font-weight:600;">${TIER_NAMES[wp.current_tier]}</span>`;
+        if (wp.baseline_complete) {
+          html += ` <span style="font-size:11px;color:#888;margin-left:auto;">Baseline: Tier ${wp.baseline_tier}</span>`;
+        } else {
+          html += ` <span style="font-size:11px;color:var(--amber);margin-left:auto;">Baseline in progress</span>`;
+        }
+        html += '</div></div>';
+
+        // Stats grid
+        html += '<div class="profile-stat-grid">';
+        html += `<div class="profile-stat"><div class="num">${wp.total_sessions}</div><div class="lbl">Sessions</div></div>`;
+        html += `<div class="profile-stat"><div class="num">${wp.total_turns}</div><div class="lbl">Turns</div></div>`;
+        html += `<div class="profile-stat"><div class="num">${wp.avg_specificity}</div><div class="lbl">Avg Spec.</div></div>`;
+        html += `<div class="profile-stat"><div class="num">${wp.hazard_accuracy_rate}%</div><div class="lbl">Hazard Acc.</div></div>`;
+        html += `<div class="profile-stat"><div class="num">${wp.photo_rate}%</div><div class="lbl">Photo Rate</div></div>`;
+        html += `<div class="profile-stat"><div class="num">${wp.teachable_moments}</div><div class="lbl">Teachable</div></div>`;
+        html += '</div>';
+
+        html += '<div class="meta-row" style="margin-top:8px">';
+        html += `<div class="meta-card"><label>Engagement</label><div class="value"><span class="engagement-badge ${wp.dominant_engagement}">${wp.dominant_engagement}</span></div></div>`;
+        html += `<div class="meta-card"><label>Confidence</label><div class="value"><span class="confidence-badge ${wp.dominant_confidence}">${wp.dominant_confidence}</span></div></div>`;
+        html += '</div>';
+
+        // Mentor notes
+        if (wp.mentor_notes) {
+          html += `<div class="meta-card"><label>Mentor Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(v${wp.mentor_notes_version})</span></label><div class="mentor-notes">${wp.mentor_notes}</div></div>`;
         }
 
-        html += `<div class="meta-card"><label>Tokens</label><div class="value">${cr.prompt_tokens} in / ${cr.completion_tokens} out</div></div>`;
-
-        html += `<div class="meta-card"><label>Latency</label><div class="value">${cr.latency_ms}ms</div></div>`;
+        html += '</div>';
       }
 
       panel.innerHTML = html;
@@ -463,6 +809,89 @@
       } catch (err) {
         console.error('Failed to load conversation:', err);
       }
+
+      // Also load profile
+      loadProfile();
+    }
+
+    async function loadProfile() {
+      const phone = document.getElementById('phoneInput').value.trim();
+      if (!phone) return;
+
+      try {
+        const resp = await fetch(`${API}/profile/${encodeURIComponent(phone)}`);
+        const data = await resp.json();
+
+        const panel = document.getElementById('metaPanel');
+        let html = '';
+
+        // Populate context controls from saved worker data
+        if (data.worker_context) {
+          const wc = data.worker_context;
+          if (wc.trade) document.getElementById('tradeSelect').value = wc.trade;
+          if (wc.experience_level) document.getElementById('experienceSelect').value = wc.experience_level;
+          if (wc.language) document.getElementById('langSelect').value = wc.language;
+        }
+
+        if (data.profile) {
+          const wp = data.profile;
+          updateTierDisplay(wp.current_tier);
+
+          html += '<div class="meta-section">';
+          html += '<div class="meta-section-title">Worker Profile</div>';
+
+          const tierClass = `t${wp.current_tier}`;
+          html += `<div class="meta-card"><label>Tier</label><div class="profile-tier-display"><span class="tier-badge ${tierClass}">${wp.current_tier}</span> <span style="font-size:13px;font-weight:600;">${TIER_NAMES[wp.current_tier]}</span>`;
+          if (wp.baseline_complete) {
+            html += ` <span style="font-size:11px;color:#888;margin-left:auto;">Baseline: Tier ${wp.baseline_tier}</span>`;
+          } else {
+            html += ` <span style="font-size:11px;color:var(--amber);margin-left:auto;">Baseline in progress</span>`;
+          }
+          html += '</div></div>';
+
+          html += '<div class="profile-stat-grid">';
+          html += `<div class="profile-stat"><div class="num">${wp.total_sessions}</div><div class="lbl">Sessions</div></div>`;
+          html += `<div class="profile-stat"><div class="num">${wp.total_turns}</div><div class="lbl">Turns</div></div>`;
+          html += `<div class="profile-stat"><div class="num">${wp.avg_specificity}</div><div class="lbl">Avg Spec.</div></div>`;
+          html += `<div class="profile-stat"><div class="num">${wp.hazard_accuracy_rate}%</div><div class="lbl">Hazard Acc.</div></div>`;
+          html += `<div class="profile-stat"><div class="num">${wp.photo_rate}%</div><div class="lbl">Photo Rate</div></div>`;
+          html += `<div class="profile-stat"><div class="num">${wp.teachable_moments}</div><div class="lbl">Teachable</div></div>`;
+          html += '</div>';
+
+          if (wp.mentor_notes) {
+            html += `<div class="meta-card" style="margin-top:8px"><label>Mentor Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(v${wp.mentor_notes_version})</span></label><div class="mentor-notes">${wp.mentor_notes}</div></div>`;
+          }
+
+          html += '</div>';
+
+          // Recent assessments
+          if (data.recent_assessments && data.recent_assessments.length > 0) {
+            html += '<div class="meta-section">';
+            html += '<div class="meta-section-title">Recent Assessments</div>';
+
+            data.recent_assessments.forEach(a => {
+              html += '<div class="meta-card" style="padding:8px 10px;">';
+              html += `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">`;
+              html += `<span style="font-size:11px;color:#888;">T${a.turn_number}</span>`;
+              html += `<span class="mode-badge ${a.response_mode}" style="font-size:10px;padding:2px 6px;">${a.response_mode}</span>`;
+              html += `<span style="font-size:11px;">Spec: ${a.specificity_score}/5</span>`;
+              html += `<span class="engagement-badge ${a.worker_engagement}" style="font-size:10px;padding:1px 6px;">${a.worker_engagement}</span>`;
+              if (a.teachable_moment) html += `<span class="bool-tag yes" style="font-size:10px;padding:1px 6px;">Teachable</span>`;
+              html += '</div></div>';
+            });
+
+            html += '</div>';
+          }
+        } else {
+          html += '<div class="meta-section">';
+          html += '<p class="meta-empty" style="margin-top:0">No profile yet — send a message to create one</p>';
+          html += '</div>';
+        }
+
+        panel.innerHTML = html;
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      }
     }
 
     async function loadStats() {
@@ -471,7 +900,8 @@
         const data = await resp.json();
 
         const panel = document.getElementById('metaPanel');
-        let html = '<h3>Stats</h3>';
+        let html = '<div class="meta-section">';
+        html += '<div class="meta-section-title">Global Stats</div>';
 
         html += '<div class="stats-bar">';
         html += `<div class="stat-box"><div class="num">${data.total_messages}</div><div class="lbl">Messages</div></div>`;
@@ -490,6 +920,7 @@
         }
 
         html += `<div class="meta-card"><label>Compliance Blocks</label><div class="value">${data.compliance_blocks}</div></div>`;
+        html += '</div>';
 
         panel.innerHTML = html;
       } catch (err) {
@@ -498,14 +929,42 @@
     }
 
     async function resetData() {
-      if (!confirm('Clear all test data?')) return;
+      if (!confirm('Clear all test data? This resets conversations, profiles, and assessments.')) return;
       try {
         await fetch(`${API}/reset`, { method: 'DELETE' });
         document.getElementById('messagesContainer').innerHTML = '';
         document.getElementById('metaPanel').innerHTML = '<h3>Message Details</h3><p class="meta-empty">Data cleared</p>';
+        updateTierDisplay(1);
       } catch (err) {
         console.error('Failed to reset:', err);
       }
+    }
+
+    async function randomPhoto() {
+      const trade = document.getElementById('tradeSelect').value;
+      const url = trade ? `${API}/random-photo?trade=${trade}` : `${API}/random-photo`;
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        document.getElementById('imageInput').value = data.url;
+
+        // Show scenario info
+        const scenarioDiv = document.getElementById('photoScenario');
+        document.getElementById('scenarioText').textContent = data.scenario;
+        document.getElementById('scenarioHazard').textContent = data.hazard_hint;
+        scenarioDiv.style.display = 'block';
+
+        // Auto-set trade from photo if console trade is "General"
+        if (!document.getElementById('tradeSelect').value && data.trade) {
+          document.getElementById('tradeSelect').value = data.trade;
+        }
+      } catch (err) {
+        console.error('Failed to load random photo:', err);
+      }
+
+      document.getElementById('messageInput').focus();
     }
 
     // Focus message input on load

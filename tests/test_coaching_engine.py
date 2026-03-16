@@ -73,26 +73,26 @@ class TestMockClassification:
 class TestMockResponses:
 
     def test_alert_response_is_direct_and_urgent(self):
-        resp = _generate_mock_response("alert")
+        resp = _generate_mock_response("alert", has_photo=True)
         # Alert should be a direct statement, not a question
         assert len(resp) > 20
         assert len(resp) <= 320
 
     def test_validate_response_invites_reply(self):
-        resp = _generate_mock_response("validate")
+        resp = _generate_mock_response("validate", has_photo=True)
         # Validate should ask what they plan to do
         assert "?" in resp
 
     def test_nudge_asks_question(self):
-        resp = _generate_mock_response("nudge")
+        resp = _generate_mock_response("nudge", has_photo=True)
         assert "?" in resp
 
     def test_probe_asks_for_context(self):
-        resp = _generate_mock_response("probe")
+        resp = _generate_mock_response("probe", has_photo=True)
         assert "?" in resp
 
     def test_affirm_is_specific(self):
-        resp = _generate_mock_response("affirm")
+        resp = _generate_mock_response("affirm", has_photo=True)
         # Should not contain generic corporate praise
         assert "Great job!" not in resp
         assert "Safety as a Contact" not in resp
@@ -102,9 +102,14 @@ class TestMockResponses:
         prohibited = ["OSHA", "Safety as a Contact", "You should", "Be careful",
                        "Safety first", "Remember to", "Best practice", "I noticed"]
         for mode in ["alert", "validate", "nudge", "probe", "affirm"]:
-            resp = _generate_mock_response(mode)
+            resp = _generate_mock_response(mode, has_photo=True)
             for phrase in prohibited:
                 assert phrase not in resp, f"'{phrase}' found in {mode} response: {resp}"
+
+    def test_no_photo_first_turn_asks_for_photo(self):
+        """When no photo on first turn, should ask for one."""
+        resp = _generate_mock_response("probe", has_photo=False, turn_number=1)
+        assert "photo" in resp.lower() or "picture" in resp.lower()
 
     def test_photo_responses_differ_from_text(self):
         text_resp = _generate_mock_response("probe", has_photo=False)

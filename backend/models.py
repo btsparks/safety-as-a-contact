@@ -1,4 +1,4 @@
-"""SQLAlchemy models — 8 tables for Phase 3."""
+"""SQLAlchemy models — 10 tables for Phase 3 + Worker Relationship System."""
 
 import hashlib
 from datetime import datetime, timezone
@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -171,4 +172,90 @@ class MessageLog(Base):
 
     __table_args__ = (
         Index("ix_msglog_phone_created", "phone_hash", "created_at"),
+    )
+
+
+class WorkerProfile(Base):
+    """Persistent relationship record — the longitudinal view of a worker.
+
+    Keyed on phone_hash so anonymous workers get profiles too.
+    Read on every incoming message to inform coaching.
+    """
+    __tablename__ = "worker_profiles"
+
+    id = Column(Integer, primary_key=True)
+    phone_hash = Column(String(64), nullable=False, unique=True, index=True)
+    worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
+
+    # Tier
+    current_tier = Column(Integer, default=1)
+    tier_updated_at = Column(DateTime, default=utcnow)
+
+    # Lifetime counters
+    total_sessions = Column(Integer, default=0)
+    total_turns = Column(Integer, default=0)
+
+    # Rolling averages
+    avg_specificity = Column(Float, default=0.0)
+    avg_engagement_depth = Column(Float, default=0.0)
+    hazard_accuracy_rate = Column(Float, default=0.0)
+    photo_rate = Column(Float, default=0.0)
+
+    # Progression markers
+    has_used_trade_vocabulary = Column(Boolean, default=False)
+    has_broadened_field_of_view = Column(Boolean, default=False)
+    has_shown_ownership_language = Column(Boolean, default=False)
+    teachable_moments_count = Column(Integer, default=0)
+
+    # Dominant patterns
+    dominant_engagement = Column(String(20), default="low")
+    dominant_confidence = Column(String(20), default="uncertain")
+    most_common_hazard_category = Column(String(50))
+
+    # AI-generated mentor notes (3-5 sentences)
+    mentor_notes = Column(Text)
+    mentor_notes_updated_at = Column(DateTime)
+    mentor_notes_version = Column(Integer, default=0)
+
+    # Baseline
+    baseline_complete = Column(Boolean, default=False)
+    baseline_completed_at = Column(DateTime)
+    baseline_tier = Column(Integer)
+
+    # Timestamps
+    first_interaction_at = Column(DateTime)
+    last_interaction_at = Column(DateTime)
+
+
+class InteractionAssessment(Base):
+    """Per-turn raw assessment data — feeds rolling window calculations.
+
+    Every coaching turn saves a row. Can be re-analyzed if the tier
+    algorithm changes.
+    """
+    __tablename__ = "interaction_assessments"
+
+    id = Column(Integer, primary_key=True)
+    phone_hash = Column(String(64), nullable=False, index=True)
+    session_id = Column(Integer, ForeignKey("coaching_sessions.id"), nullable=True)
+    observation_id = Column(Integer, ForeignKey("observations.id"), nullable=True)
+    coaching_response_id = Column(Integer, ForeignKey("coaching_responses.id"), nullable=True)
+
+    turn_number = Column(Integer, default=1)
+    response_mode = Column(String(20))  # alert/validate/nudge/probe/affirm
+    hazard_present = Column(Boolean, default=False)
+    hazard_category = Column(String(50))
+    specificity_score = Column(Integer, default=0)  # 1-5
+    worker_engagement = Column(String(20))  # high/medium/low
+    worker_confidence = Column(String(20))  # confident/uncertain/resistant
+    teachable_moment = Column(Boolean, default=False)
+    suggested_next_direction = Column(String(20))  # deeper/broader/close
+    has_photo = Column(Boolean, default=False)
+    worker_asked_question = Column(Boolean, default=False)
+    worker_text_length = Column(Integer, default=0)
+
+    created_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        Index("ix_ia_phone_created", "phone_hash", "created_at"),
     )

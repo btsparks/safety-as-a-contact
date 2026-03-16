@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Training Review — Safety as a Contact</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+    :root {
+      --amber: #E8922A;
+      --amber-light: #F5C882;
+      --slate: #1E2A3B;
+      --concrete: #F2F0EC;
+      --green: #3A7D44;
+      --iron: #4A4A4A;
+      --red: #C0392B;
+      --blue: #2E6B8A;
+      --white: #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--concrete);
+      color: var(--iron);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--slate);
+      color: var(--white);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'DM Sans', sans-serif;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header .badge { background: var(--amber); color: var(--slate); padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    header .nav { display: flex; gap: 12px; align-items: center; }
+    header .nav button {
+      background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--white);
+      padding: 5px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+    header .nav button:hover { background: rgba(255,255,255,0.1); }
+    header .nav .counter { font-size: 13px; opacity: 0.7; }
+
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left: Photo + Scene Analysis */
+    .photo-panel {
+      width: 45%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
+
+    .photo-container {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 300px;
+      max-height: 50vh;
+    }
+    .photo-container img {
+      max-width: 100%;
+      max-height: 50vh;
+      object-fit: contain;
+    }
+
+    .scene-panel {
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .scene-card {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .scene-card h4 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: var(--slate);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .scene-card p { font-size: 14px; line-height: 1.5; }
+
+    .hazard-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+      font-size: 13px;
+    }
+    .hazard-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .hazard-dot.sev1, .hazard-dot.sev2 { background: var(--amber); }
+    .hazard-dot.sev3 { background: #D97706; }
+    .hazard-dot.sev4, .hazard-dot.sev5 { background: var(--red); }
+
+    .tag {
+      display: inline-block;
+      background: #E5E7EB;
+      color: var(--iron);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin: 2px;
+    }
+
+    .mode-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .mode-badge.alert { background: #FECDD3; color: var(--red); }
+    .mode-badge.validate { background: #D1FAE5; color: var(--green); }
+    .mode-badge.nudge { background: #FEF3C7; color: #92400E; }
+    .mode-badge.probe { background: #DBEAFE; color: var(--blue); }
+    .mode-badge.affirm { background: #E0E7FF; color: #4338CA; }
+
+    /* Right: Conversation + Review */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Profile bar */
+    .profile-bar {
+      background: var(--white);
+      padding: 10px 16px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .profile-bar .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .profile-bar .stat .num {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--slate);
+    }
+    .profile-bar .stat .lbl {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    /* Chat thread */
+    .thread {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+    .msg.worker {
+      align-self: flex-start;
+      background: #E5E7EB;
+      color: var(--slate);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.coach {
+      align-self: flex-end;
+      background: var(--amber);
+      color: var(--slate);
+      border-bottom-right-radius: 4px;
+    }
+    .msg .meta {
+      font-size: 10px;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    .msg .mode-tag {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 2px;
+    }
+
+    /* Input bar */
+    .input-bar {
+      background: var(--white);
+      padding: 12px 16px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 8px;
+    }
+    .input-bar input {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 10px 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      flex: 1;
+    }
+    .input-bar button {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      background: var(--amber);
+      color: var(--slate);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .input-bar button:hover { background: var(--amber-light); }
+    .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .input-bar .btn-secondary {
+      background: var(--white);
+      border: 1px solid #ccc;
+      color: var(--iron);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      padding: 10px 14px;
+    }
+
+    /* Rating bar */
+    .rating-bar {
+      background: var(--white);
+      padding: 12px 16px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .rating-bar label { font-size: 13px; font-weight: 600; color: var(--slate); }
+    .star-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid #ddd;
+      background: var(--white);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--iron);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .star-btn:hover { border-color: var(--amber); }
+    .star-btn.active { background: var(--amber); color: var(--white); border-color: var(--amber); }
+    .rating-bar input {
+      flex: 1;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .loading { text-align: center; padding: 40px; color: #999; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; font-size: 14px; }
+
+    /* Mentor notes */
+    .mentor-notes {
+      background: #FEF3C7;
+      border-left: 3px solid var(--amber);
+      padding: 10px 14px;
+      margin: 8px 16px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      font-style: italic;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:12px">
+      <h1>Training Review</h1>
+      <span class="badge">TRAINING</span>
+    </div>
+    <div class="nav">
+      <span class="counter" id="photoCounter">Loading...</span>
+      <button onclick="prevPhoto()">Prev</button>
+      <button onclick="nextPhoto()">Next</button>
+      <button onclick="window.location='/console'">SMS Console</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- Left: Photo + Scene -->
+    <div class="photo-panel">
+      <div class="photo-container" id="photoContainer">
+        <div class="loading">Loading photos...</div>
+      </div>
+      <div class="scene-panel" id="scenePanel"></div>
+    </div>
+
+    <!-- Right: Conversation + Rating -->
+    <div class="right-panel">
+      <div class="profile-bar" id="profileBar">
+        <div class="stat"><div class="num" id="tierNum">1</div><div class="lbl">Tier</div></div>
+        <div class="stat"><div class="num" id="turnsNum">0</div><div class="lbl">Turns</div></div>
+        <div class="stat"><div class="num" id="sessionsNum">0</div><div class="lbl">Sessions</div></div>
+        <div class="stat"><div class="num" id="specNum">0</div><div class="lbl">Specificity</div></div>
+        <div class="stat"><div class="num" id="hazardNum">0%</div><div class="lbl">Hazard Acc</div></div>
+      </div>
+
+      <div id="mentorNotes" class="mentor-notes" style="display:none;"></div>
+
+      <div class="thread" id="thread">
+        <div class="empty-state">Select a photo and start a conversation.<br>Type as a worker — the AI coaches you.</div>
+      </div>
+
+      <div class="rating-bar">
+        <label>Rate:</label>
+        <button class="star-btn" onclick="setRating(1)">1</button>
+        <button class="star-btn" onclick="setRating(2)">2</button>
+        <button class="star-btn" onclick="setRating(3)">3</button>
+        <button class="star-btn" onclick="setRating(4)">4</button>
+        <button class="star-btn" onclick="setRating(5)">5</button>
+        <input type="text" id="ratingNotes" placeholder="Notes on this response...">
+      </div>
+
+      <div class="input-bar">
+        <input type="text" id="messageInput" placeholder="Reply as a worker..." onkeydown="if(event.key==='Enter')sendReply()">
+        <button id="sendBtn" onclick="sendReply()">Send</button>
+        <button class="btn-secondary" onclick="resetConversation()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/training';
+    let photos = [];
+    let currentIdx = 0;
+    let currentRating = 0;
+
+    // Load all analyzed photos
+    async function loadPhotos() {
+      try {
+        const resp = await fetch(`${API}/photos`);
+        const data = await resp.json();
+        photos = data.photos;
+        document.getElementById('photoCounter').textContent = `${photos.length} photos`;
+        if (photos.length > 0) showPhoto(0);
+      } catch (err) {
+        document.getElementById('photoContainer').innerHTML = `<div class="loading">Error loading photos: ${err.message}</div>`;
+      }
+    }
+
+    function showPhoto(idx) {
+      if (idx < 0 || idx >= photos.length) return;
+      currentIdx = idx;
+      currentRating = 0;
+      updateRatingButtons();
+      const photo = photos[idx];
+
+      document.getElementById('photoCounter').textContent = `${idx + 1} / ${photos.length}`;
+
+      // Photo
+      document.getElementById('photoContainer').innerHTML =
+        `<img src="${API}/photo-image/${photo.id}" alt="Construction site photo">`;
+
+      // Scene analysis
+      const scene = photo.scene;
+      let html = '';
+
+      html += `<div class="scene-card"><h4>Scene</h4><p>${scene.description}</p></div>`;
+
+      if (scene.hazards.length > 0) {
+        html += `<div class="scene-card"><h4>Hazards</h4>`;
+        for (const h of scene.hazards) {
+          html += `<div class="hazard-item">
+            <div class="hazard-dot sev${h.severity}"></div>
+            <span>[${h.category}] ${h.hazard} <b>(sev ${h.severity})</b></span>
+          </div>`;
+        }
+        html += `</div>`;
+      }
+
+      html += `<div class="scene-card"><h4>Trade Context</h4><p>${scene.trade_context}</p></div>`;
+      html += `<div class="scene-card"><h4>Recommended Mode</h4><span class="mode-badge ${scene.recommended_mode}">${scene.recommended_mode}</span> &nbsp; Severity: ${scene.severity}/5</div>`;
+      html += `<div class="scene-card"><h4>Coaching Focus</h4><p>${scene.coaching_focus}</p></div>`;
+
+      if (scene.tags.length > 0) {
+        html += `<div class="scene-card"><h4>Tags</h4>`;
+        for (const t of scene.tags) html += `<span class="tag">${t}</span>`;
+        html += `</div>`;
+      }
+
+      // Photo metadata
+      let meta = [];
+      if (photo.date_taken) meta.push(new Date(photo.date_taken).toLocaleDateString());
+      if (photo.photographer) meta.push(photo.photographer);
+      if (photo.project_name) meta.push(photo.project_name);
+      if (meta.length) {
+        html += `<div class="scene-card"><h4>Photo Metadata</h4><p style="font-size:12px;color:#888">${meta.join(' &bull; ')}</p></div>`;
+      }
+
+      document.getElementById('scenePanel').innerHTML = html;
+
+      // Clear conversation thread
+      document.getElementById('thread').innerHTML = '<div class="empty-state">Type as a worker to start the conversation.</div>';
+      document.getElementById('mentorNotes').style.display = 'none';
+      document.getElementById('messageInput').value = '';
+      document.getElementById('ratingNotes').value = '';
+
+      // Reset profile display
+      updateProfile({current_tier: 1, total_sessions: 0, total_turns: 0, avg_specificity: 0, hazard_accuracy_rate: 0});
+
+      // Load benchmark response if exists
+      loadBenchmark(photo.id);
+    }
+
+    async function loadBenchmark(photoId) {
+      try {
+        const resp = await fetch(`${API}/benchmark-response/${photoId}`);
+        const data = await resp.json();
+        if (data.benchmark) {
+          const b = data.benchmark;
+          const thread = document.getElementById('thread');
+          thread.innerHTML = `
+            <div style="padding:12px;background:var(--white);border-radius:8px;margin-bottom:8px;">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:6px">Benchmark Response</div>
+              <div style="font-size:14px;line-height:1.5;">${b.response_text}</div>
+              <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+                <span class="mode-badge ${b.response_mode}">${b.response_mode}</span>
+                <span style="font-size:12px;color:#888;">auto: ${b.auto_scores.total}/5</span>
+                ${b.human_rating ? `<span style="font-size:12px;color:var(--green);">rated: ${b.human_rating}/5</span>` : ''}
+              </div>
+            </div>
+            <div class="empty-state" style="padding:20px">Now type as a worker below to start a live conversation.</div>
+          `;
+          if (b.human_rating) {
+            currentRating = b.human_rating;
+            updateRatingButtons();
+          }
+        }
+      } catch (err) {
+        // Benchmark not found - that's fine
+      }
+    }
+
+    function updateProfile(p) {
+      document.getElementById('tierNum').textContent = p.current_tier;
+      document.getElementById('turnsNum').textContent = p.total_turns;
+      document.getElementById('sessionsNum').textContent = p.total_sessions;
+      document.getElementById('specNum').textContent = p.avg_specificity;
+      document.getElementById('hazardNum').textContent = p.hazard_accuracy_rate + '%';
+
+      const mentorEl = document.getElementById('mentorNotes');
+      if (p.mentor_notes) {
+        mentorEl.textContent = p.mentor_notes;
+        mentorEl.style.display = 'block';
+      } else {
+        mentorEl.style.display = 'none';
+      }
+    }
+
+    async function sendReply() {
+      const photo = photos[currentIdx];
+      if (!photo) return;
+
+      const message = document.getElementById('messageInput').value.trim();
+      if (!message) return;
+
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+
+      // Clear empty state
+      const thread = document.getElementById('thread');
+      const emptyStates = thread.querySelectorAll('.empty-state');
+      emptyStates.forEach(el => el.remove());
+
+      // Show worker message immediately
+      addMessage('worker', message);
+
+      try {
+        const resp = await fetch(`${API}/converse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo_id: photo.id, message }),
+        });
+        const data = await resp.json();
+
+        // If this is the first reply and there's thread history, rebuild
+        if (data.thread && data.thread.length > 2) {
+          thread.innerHTML = '';
+          for (const t of data.thread) {
+            addMessage(t.role === 'worker' ? 'worker' : 'coach', t.text, t.mode);
+          }
+        } else {
+          // Just add the coaching response
+          addMessage('coach', data.response_text, data.response_mode);
+        }
+
+        // Update profile
+        if (data.profile) updateProfile(data.profile);
+
+        // Show assessment metadata
+        if (data.specificity_score || data.worker_engagement) {
+          const meta = [];
+          if (data.specificity_score) meta.push(`spec=${data.specificity_score}`);
+          if (data.worker_engagement) meta.push(`eng=${data.worker_engagement}`);
+          if (data.worker_confidence) meta.push(`conf=${data.worker_confidence}`);
+          if (data.teachable_moment) meta.push('teachable!');
+          if (data.suggested_next_direction) meta.push(`next=${data.suggested_next_direction}`);
+          // Show as subtle assessment line
+          const assessDiv = document.createElement('div');
+          assessDiv.style.cssText = 'font-size:10px;color:#999;text-align:right;padding:0 14px;';
+          assessDiv.textContent = meta.join(' | ');
+          thread.appendChild(assessDiv);
+        }
+
+      } catch (err) {
+        addMessage('coach', 'Error: ' + err.message);
+      }
+
+      sendBtn.disabled = false;
+      document.getElementById('messageInput').value = '';
+      document.getElementById('messageInput').focus();
+    }
+
+    function addMessage(role, text, mode) {
+      const thread = document.getElementById('thread');
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      let modeTag = '';
+      if (mode) modeTag = `<div class="mode-tag">${mode}</div>`;
+      div.innerHTML = `${modeTag}${text}`;
+      thread.appendChild(div);
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    async function resetConversation() {
+      const photo = photos[currentIdx];
+      if (!photo) return;
+
+      try {
+        await fetch(`${API}/reset-conversation/${photo.id}`, { method: 'POST' });
+        showPhoto(currentIdx);
+      } catch (err) {
+        console.error('Reset failed:', err);
+      }
+    }
+
+    function setRating(n) {
+      currentRating = n;
+      updateRatingButtons();
+      // Auto-save if we have a benchmark result
+      saveBenchmarkRating();
+    }
+
+    function updateRatingButtons() {
+      document.querySelectorAll('.star-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (i + 1) <= currentRating);
+      });
+    }
+
+    async function saveBenchmarkRating() {
+      const photo = photos[currentIdx];
+      if (!photo || !currentRating) return;
+
+      try {
+        const resp = await fetch(`${API}/benchmark-response/${photo.id}`);
+        const data = await resp.json();
+        if (data.benchmark) {
+          await fetch(`${API}/rate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              benchmark_result_id: data.benchmark.id,
+              rating: currentRating,
+              notes: document.getElementById('ratingNotes').value.trim(),
+            }),
+          });
+        }
+      } catch (err) {
+        console.error('Rating save failed:', err);
+      }
+    }
+
+    // Also save rating notes on blur
+    document.getElementById('ratingNotes').addEventListener('blur', () => {
+      if (currentRating) saveBenchmarkRating();
+    });
+
+    function prevPhoto() { if (currentIdx > 0) showPhoto(currentIdx - 1); }
+    function nextPhoto() { if (currentIdx < photos.length - 1) showPhoto(currentIdx + 1); }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft') prevPhoto();
+      if (e.key === 'ArrowRight') nextPhoto();
+      if (e.key >= '1' && e.key <= '5') setRating(parseInt(e.key));
+    });
+
+    // Init
+    loadPhotos();
+    document.getElementById('messageInput').focus();
+  </script>
+</body>
+</html>

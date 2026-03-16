@@ -152,7 +152,6 @@ def handle_inbound_message(
     worker = db.query(Worker).filter(Worker.phone_hash == ph).first()
     trade = worker.trade if worker else None
     experience = worker.experience_level if worker else "entry"
-    worker_tier = 1  # TODO: calculate from rolling window once we have enough data
     preferred_language = worker.preferred_language if worker else "en"
 
     # Create observation record (with media URLs if present)
@@ -165,7 +164,7 @@ def handle_inbound_message(
     db.commit()
     db.refresh(obs)
 
-    # Run coaching engine (multi-turn aware)
+    # Run coaching engine (multi-turn aware, tier resolved from profile)
     coaching_result = run_coaching(
         db=db,
         observation_text=body,
@@ -175,7 +174,6 @@ def handle_inbound_message(
         media_urls=media_urls,
         phone_hash=ph,
         worker_id=worker.id if worker else None,
-        worker_tier=worker_tier,
         preferred_language=preferred_language,
     )
 
