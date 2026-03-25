@@ -46,7 +46,7 @@ class TestSimulate:
         assert data["action"] == "observation"
         assert "coaching_result" in data
         cr = data["coaching_result"]
-        assert cr["response_mode"] in ("alert", "validate", "nudge", "probe", "affirm")
+        assert cr["response_mode"] in ("reference", "reflect", "connect")
         assert cr["hazard_category"] is not None
         assert 1 <= cr["severity"] <= 5
         assert cr["is_mock"] is True
@@ -156,7 +156,7 @@ class TestFullConsoleFlow:
         d3 = r3.json()
         assert d3["action"] == "observation"
         assert "coaching_result" in d3
-        assert d3["coaching_result"]["response_mode"] in ("alert", "validate", "nudge", "probe", "affirm")
+        assert d3["coaching_result"]["response_mode"] in ("reference", "reflect", "connect")
 
         # 4. Check stats
         r4 = client.get("/api/test/stats")

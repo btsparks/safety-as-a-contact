@@ -117,12 +117,12 @@ def calculate_tier(
 ) -> int:
     """Calculate tier from rolling window of assessments.
 
-    Weighted composite:
-    - Specificity (25%) -- avg specificity_score / 4.0
+    Weighted composite (updated for photo-first workers):
+    - Specificity (20%) -- avg specificity_score / 4.0
     - Engagement depth (20%) -- rate of high engagement
     - Confidence (15%) -- rate of confident responses
     - Hazard accuracy (15%) -- rate of real hazard identification
-    - Detail level (10%) -- avg text length / 100
+    - Photo consistency (15%) -- rate of photo submissions (replaces text length)
     - Initiative (10%) -- (question rate + photo rate) / 2
     - Teaching moments (5%) -- count / 3
 
@@ -134,7 +134,7 @@ def calculate_tier(
 
     n = len(assessments)
 
-    # Specificity (25%) -- avg specificity_score / 4.0, capped at 1.0
+    # Specificity (20%) -- avg specificity_score / 4.0, capped at 1.0
     avg_spec = sum(a.specificity_score or 0 for a in assessments) / n
     specificity = min(avg_spec / 4.0, 1.0)
 
@@ -147,9 +147,9 @@ def calculate_tier(
     # Hazard accuracy (15%) -- rate of real hazard identification
     hazard_accuracy = sum(1 for a in assessments if a.hazard_present) / n
 
-    # Detail level (10%) -- avg text length / 100, capped at 1.0
-    avg_length = sum(a.worker_text_length or 0 for a in assessments) / n
-    detail = min(avg_length / 100.0, 1.0)
+    # Photo consistency (15%) -- rate of photo submissions
+    # Replaces "detail level" (text length) which punished low-text/photo-first workers
+    photo_consistency = sum(1 for a in assessments if a.has_photo) / n
 
     # Initiative (10%) -- (question rate + photo rate) / 2
     question_rate = sum(1 for a in assessments if a.worker_asked_question) / n
@@ -162,11 +162,11 @@ def calculate_tier(
 
     # Weighted composite
     score = (
-        specificity * 0.25
+        specificity * 0.20
         + high_engagement * 0.20
         + confident * 0.15
         + hazard_accuracy * 0.15
-        + detail * 0.10
+        + photo_consistency * 0.15
         + initiative * 0.10
         + teaching * 0.05
     )

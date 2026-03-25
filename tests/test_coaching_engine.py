@@ -20,44 +20,44 @@ from tests.conftest import TEST_PHONE
 
 class TestMockClassification:
 
-    def test_fall_hazard_classified_as_alert(self):
+    def test_fall_hazard_classified_as_reference(self):
         cat, sev, mode, lang = _classify_mock("Worker near unprotected edge on the 3rd floor")
         assert cat == "environmental"
         assert sev >= 4
-        assert mode == "alert"
+        assert mode == "reference"
 
-    def test_rebar_classified_as_alert(self):
+    def test_rebar_classified_as_reference(self):
         cat, sev, mode, lang = _classify_mock("Exposed rebar near south entrance no caps")
         assert cat == "environmental"
         assert sev >= 4
 
-    def test_electrical_classified_as_critical(self):
+    def test_electrical_classified_as_reference(self):
         cat, sev, mode, lang = _classify_mock("Electrocution risk from live wire near the trailer")
         assert cat == "equipment"
         assert sev == 5
-        assert mode == "alert"
+        assert mode == "reference"
 
-    def test_trench_classified_as_critical(self):
+    def test_trench_classified_as_reference(self):
         cat, sev, mode, lang = _classify_mock("Deep trench with no shoring")
         assert sev == 5
-        assert mode == "alert"
+        assert mode == "reference"
 
-    def test_ppe_classified_as_validate(self):
+    def test_ppe_classified_as_reference(self):
         cat, sev, mode, lang = _classify_mock("Crew wearing hard hats and vests today")
         assert cat == "procedural"
-        assert mode == "validate"
+        assert mode == "reference"
 
-    def test_housekeeping_classified_as_nudge(self):
+    def test_housekeeping_classified_as_reflect(self):
         cat, sev, mode, lang = _classify_mock("Lots of debris and clutter around the work area")
-        assert mode == "nudge"
+        assert mode == "reflect"
 
-    def test_positive_behavior_classified_as_affirm(self):
+    def test_positive_behavior_classified_as_reflect(self):
         cat, sev, mode, lang = _classify_mock("Great job by the crew keeping the area safe today")
-        assert mode == "affirm"
+        assert mode == "reflect"
 
-    def test_generic_observation_defaults_to_probe(self):
+    def test_generic_observation_defaults_to_reflect(self):
         cat, sev, mode, lang = _classify_mock("Something off about the setup at zone C")
-        assert mode == "probe"
+        assert mode == "reflect"
 
     def test_spanish_detection(self):
         cat, sev, mode, lang = _classify_mock("Hay peligro de caida en el andamio")
@@ -72,48 +72,38 @@ class TestMockClassification:
 
 class TestMockResponses:
 
-    def test_alert_response_is_direct_and_urgent(self):
-        resp = _generate_mock_response("alert", has_photo=True)
-        # Alert should be a direct statement, not a question
+    def test_reference_response_has_substance(self):
+        resp = _generate_mock_response("reference", has_photo=True)
         assert len(resp) > 20
         assert len(resp) <= 320
-
-    def test_validate_response_invites_reply(self):
-        resp = _generate_mock_response("validate", has_photo=True)
-        # Validate should ask what they plan to do
         assert "?" in resp
 
-    def test_nudge_asks_question(self):
-        resp = _generate_mock_response("nudge", has_photo=True)
+    def test_reflect_response_asks_question(self):
+        resp = _generate_mock_response("reflect", has_photo=True)
         assert "?" in resp
 
-    def test_probe_asks_for_context(self):
-        resp = _generate_mock_response("probe", has_photo=True)
+    def test_connect_response_asks_question(self):
+        resp = _generate_mock_response("connect", has_photo=True)
         assert "?" in resp
-
-    def test_affirm_is_specific(self):
-        resp = _generate_mock_response("affirm", has_photo=True)
-        # Should not contain generic corporate praise
-        assert "Great job!" not in resp
-        assert "Safety as a Contact" not in resp
 
     def test_no_responses_contain_prohibited_language(self):
         """No mock response should violate the framework."""
         prohibited = ["OSHA", "Safety as a Contact", "You should", "Be careful",
-                       "Safety first", "Remember to", "Best practice", "I noticed"]
-        for mode in ["alert", "validate", "nudge", "probe", "affirm"]:
+                       "Safety first", "Remember to", "Best practice", "I noticed",
+                       "That looks unsafe", "That's a hazard", "You need to"]
+        for mode in ["reference", "reflect", "connect"]:
             resp = _generate_mock_response(mode, has_photo=True)
             for phrase in prohibited:
                 assert phrase not in resp, f"'{phrase}' found in {mode} response: {resp}"
 
     def test_no_photo_first_turn_asks_for_photo(self):
         """When no photo on first turn, should ask for one."""
-        resp = _generate_mock_response("probe", has_photo=False, turn_number=1)
+        resp = _generate_mock_response("reflect", has_photo=False, turn_number=1)
         assert "photo" in resp.lower() or "picture" in resp.lower()
 
     def test_photo_responses_differ_from_text(self):
-        text_resp = _generate_mock_response("probe", has_photo=False)
-        photo_resp = _generate_mock_response("probe", has_photo=True)
+        text_resp = _generate_mock_response("reflect", has_photo=False)
+        photo_resp = _generate_mock_response("reflect", has_photo=True)
         # They should be different (photo-specific vs text-specific)
         assert text_resp != photo_resp
 
@@ -131,16 +121,16 @@ class TestCoachMock:
     def test_all_fields_populated(self):
         result = coach_mock("Worker on ladder without harness")
         assert result.response_text
-        assert result.response_mode in ("alert", "validate", "nudge", "probe", "affirm")
+        assert result.response_mode in ("reference", "reflect", "connect")
         assert result.hazard_category in ("environmental", "equipment", "procedural", "ergonomic", "behavioral")
         assert 1 <= result.severity <= 5
         assert result.language in ("en", "es")
         assert result.latency_ms >= 0
 
-    def test_severity_5_forces_alert(self):
+    def test_severity_5_forces_reference(self):
         result = coach_mock("Electrocution risk from live wire near the work area")
         assert result.severity == 5
-        assert result.response_mode == "alert"
+        assert result.response_mode == "reference"
 
     def test_trade_parameter_accepted(self):
         result = coach_mock("Unsafe scaffold", trade="scaffold_builder")

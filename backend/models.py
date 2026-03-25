@@ -1,4 +1,4 @@
-"""SQLAlchemy models — 10 tables for Phase 3 + Worker Relationship System."""
+"""SQLAlchemy models — core tables + document layer + worker relationship system."""
 
 import hashlib
 from datetime import datetime, timezone
@@ -47,11 +47,13 @@ class Project(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     name = Column(String(200), nullable=False)
     location = Column(String(300))
+    description = Column(Text, nullable=True)  # Project scope for context injection
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=utcnow)
 
     company = relationship("Company", back_populates="projects")
     observations = relationship("Observation", back_populates="project")
+    safety_documents = relationship("SafetyDocument", back_populates="project")
 
 
 class Worker(Base):
@@ -61,6 +63,9 @@ class Worker(Base):
     phone_hash = Column(String(64), nullable=False, unique=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id"))
+    first_name = Column(String(50), nullable=True)  # Collected during onboarding
+    active_project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)  # Current project
+    project_assigned_at = Column(DateTime, nullable=True)
     trade = Column(String(50))
     experience_level = Column(String(20), default="entry")  # entry/intermediate/expert
     preferred_language = Column(String(5), default="en")
@@ -68,6 +73,7 @@ class Worker(Base):
 
     company = relationship("Company", back_populates="workers")
     observations = relationship("Observation", back_populates="worker")
+    active_project = relationship("Project", foreign_keys=[active_project_id])
 
 
 class ConsentRecord(Base):
@@ -111,6 +117,7 @@ class CoachingSession(Base):
     toolbox_talk_candidate = Column(Boolean, default=False)
     media_urls = Column(Text)  # JSON list — all photos in this session
     progression_markers = Column(Text)  # JSON assessment data
+    document_references_json = Column(Text)  # JSON list of doc IDs used in this session
 
     observations = relationship("Observation", back_populates="session")
 
@@ -217,6 +224,9 @@ class WorkerProfile(Base):
     mentor_notes_updated_at = Column(DateTime)
     mentor_notes_version = Column(Integer, default=0)
 
+    # Document engagement
+    document_exposure = Column(Text)  # JSON: {doc_id: {times_referenced, last_referenced}}
+
     # Baseline
     baseline_complete = Column(Boolean, default=False)
     baseline_completed_at = Column(DateTime)
@@ -258,4 +268,52 @@ class InteractionAssessment(Base):
 
     __table_args__ = (
         Index("ix_ia_phone_created", "phone_hash", "created_at"),
+    )
+
+
+class SafetyDocument(Base):
+    """Uploaded safety document sections — the reference library."""
+    __tablename__ = "safety_documents"
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)  # null = global/OSHA
+    title = Column(String(300), nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String(50), nullable=False)
+    # Categories: site_safety_plan, company_procedure, osha_standard,
+    # trade_reference, incident_report, lessons_learned, hazard_register,
+    # observation_insight
+    section_label = Column(String(200))
+    trade_tags = Column(Text)  # JSON list of relevant trades
+    hazard_tags = Column(Text)  # JSON list of relevant hazard categories
+    source_attribution = Column(String(300))  # How to cite in responses
+    language = Column(String(5), default="en")
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow)
+
+    project = relationship("Project", back_populates="safety_documents")
+    references = relationship("DocumentReference", back_populates="document")
+
+    __table_args__ = (
+        Index("ix_safetydoc_project", "project_id"),
+        Index("ix_safetydoc_category", "category"),
+    )
+
+
+class DocumentReference(Base):
+    """Tracks which documents were referenced in which sessions."""
+    __tablename__ = "document_references"
+
+    id = Column(Integer, primary_key=True)
+    phone_hash = Column(String(64), nullable=False)
+    session_id = Column(Integer, ForeignKey("coaching_sessions.id"), nullable=True)
+    document_id = Column(Integer, ForeignKey("safety_documents.id"), nullable=False)
+    observation_id = Column(Integer, ForeignKey("observations.id"), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    document = relationship("SafetyDocument", back_populates="references")
+
+    __table_args__ = (
+        Index("ix_docref_phone", "phone_hash"),
+        Index("ix_docref_document", "document_id"),
     )

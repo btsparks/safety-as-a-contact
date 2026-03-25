@@ -115,7 +115,7 @@ def test_inbound_observation_with_consent(client, db, seed_consent):
     cr = db.query(CoachingResponse).first()
     assert cr is not None
     assert cr.observation_id == obs.id
-    assert cr.response_mode in ("alert", "validate", "nudge", "probe", "affirm")
+    assert cr.response_mode in ("reference", "reflect", "connect")
     assert cr.hazard_category is not None
 
     # Outbound coaching message sent (may be blocked by sending window in off-hours tests)

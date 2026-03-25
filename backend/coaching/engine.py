@@ -1,6 +1,7 @@
 """Coaching engine — multi-turn conversation management + mock/live Claude API.
 
-Source of truth: .claude/skills/prompt-architecture/SKILL.md
+Document-grounded + behavioral reflection model.
+Source of truth: docs/PIVOT_PLAN.md
 """
 
 import json
@@ -37,7 +38,7 @@ class CoachingResult(BaseModel):
     """Result from the coaching engine — identical structure for mock and live."""
 
     response_text: str
-    response_mode: str  # alert/validate/nudge/probe/affirm
+    response_mode: str  # reference/reflect/connect (v2) or alert/validate/nudge/probe/affirm (v1 compat)
     hazard_category: str
     severity: int  # 1-5
     language: str  # en/es
@@ -49,6 +50,10 @@ class CoachingResult(BaseModel):
     has_photo: bool = False
     turn_number: int = 1
     session_id: int | None = None
+    # Document references
+    document_ids: list[int] = []
+    document_referenced: bool = False
+    trade_match: bool = True
     # Assessment metadata (from AI, not shown to worker)
     specificity_score: int = 0
     worker_engagement: str = ""
@@ -193,90 +198,70 @@ def update_session_metadata(
 _KEYWORD_HAZARDS: list[tuple[list[str], str, int, str]] = [
     (["fall", "height", "edge", "ledge", "roof", "ladder", "scaffold", "harness",
       "tie off", "tie-off"],
-     "environmental", 4, "alert"),
+     "environmental", 4, "reference"),
     (["rebar", "impalement", "exposed", "caps", "mushroom"],
-     "environmental", 4, "alert"),
+     "environmental", 4, "reference"),
     (["electrocution", "shock", "energized", "live wire", "power line", "electrical"],
-     "equipment", 5, "alert"),
+     "equipment", 5, "reference"),
     (["trench", "excavation", "cave", "collapse", "shoring"],
-     "environmental", 5, "alert"),
+     "environmental", 5, "reference"),
     (["fire", "explosion", "gas leak", "flammable"],
-     "environmental", 5, "alert"),
+     "environmental", 5, "reference"),
     (["guard", "blade", "saw", "cut", "laceration", "amputation"],
-     "equipment", 3, "validate"),
+     "equipment", 3, "reference"),
     (["ppe", "glasses", "gloves", "hard hat", "helmet", "vest", "boots", "footwear",
       "steel toe", "steel toes", "safety shoes", "hi-vis", "high vis", "goggles",
       "face shield", "respirator"],
-     "procedural", 2, "validate"),
+     "procedural", 2, "reference"),
     (["housekeeping", "trash", "debris", "clutter", "trip", "slip"],
-     "environmental", 2, "nudge"),
+     "environmental", 2, "reflect"),
     (["noise", "hearing", "loud", "ear plug", "ear pro", "earplug"],
-     "environmental", 2, "nudge"),
+     "environmental", 2, "reflect"),
     (["lifting", "back", "strain", "ergonomic", "posture", "heavy"],
-     "ergonomic", 2, "nudge"),
+     "ergonomic", 2, "reflect"),
     (["good", "nice", "safe", "proud", "team", "crew", "great"],
-     "behavioral", 1, "affirm"),
+     "behavioral", 1, "reflect"),
 ]
 
 
-# Mock responses — professional tone, photo-first workflow.
-# - Question-first (3:1 ratio)
-# - Specific, not generic
-# - No corporate language, no brand sign-off
-# - ONE observation, invites reply
-# - Professional but approachable voice
+# Mock responses — document-grounded + reflective model.
+# Three modes: reference, reflect, connect.
+# No technical advice, no safety judgments.
 
 _MOCK_RESPONSES: dict[str, list[str]] = {
-    "alert": [
-        "That wall is bowing. Get everyone back 20 feet. Do not go near it until it is shored.",
-        "Exposed line right there. Kill the power before anyone touches that panel.",
-        "That trench has no box past the bend. Nobody goes in until it is shored.",
+    "reference": [
+        "Got your photo. Your site safety plan covers fall protection for this type of work in Section 3.2. Who else on your crew has seen this area today?",
+        "That area shows up in the project safety plan under housekeeping standards. Has this been flagged at a toolbox talk yet?",
+        "The company had a similar incident back in 2023 (Incident #2023-041). Has anyone on your crew gone over that one?",
     ],
-    "validate": [
-        "Trust that instinct — that is too close without a line. What is your plan to flag it for the crew?",
-        "Good call on that one. Most people walk right past it. How are you keeping others back?",
-        "That is a real catch. What tipped you off?",
+    "reflect": [
+        "Got your photo of that area. Nothing in the current site docs covers this specifically — worth bringing up with your foreman. What is your read on it?",
+        "Interesting catch. What made you stop and take this photo?",
+        "Got your photo — lot going on over there. What caught your eye about this area?",
     ],
-    "nudge": [
-        "Pour setup looks solid. What is the plan for those cords if that area takes on water?",
-        "Housekeeping on the deck looks good. What about that material stack — anything shifting?",
-        "Staging looks right. What happens to this area when the crane starts swinging loads this afternoon?",
-    ],
-    "probe": [
-        "Busy site — what is happening right behind where you took this?",
-        "Deck looks clean. What changes here later in the shift?",
-        "Everything looks set. What is the weather doing to this area by end of day?",
-    ],
-    "affirm": [
-        "Barricade placement is textbook — keeps foot traffic clear of the swing radius.",
-        "Clean layout, cords routed, materials staged right. That is how it is done.",
-        "Solid eye. Stay sharp out there.",
+    "connect": [
+        "Got your photo. That is outside your usual work area — how does this connect to what your crew is doing today?",
+        "That is a different setup than what you usually send. What brought you over to this area?",
+        "Good eye spotting that. How does this affect the work your crew has going on nearby?",
     ],
 }
 
 _MOCK_PHOTO_RESPONSES: dict[str, list[str]] = {
-    "alert": [
-        "Unguarded edge with foot traffic right there. Get a barricade up now.",
+    "reference": [
+        "Got your photo. The site safety plan has a section on this type of work. Who else on the crew has seen this area?",
     ],
-    "validate": [
-        "Right instinct — that setup does not look stable. What is your plan?",
+    "reflect": [
+        "Got your photo — lot going on there. What caught your eye about this spot?",
     ],
-    "nudge": [
-        "Work area looks good. What about overhead — anything rigged above this spot?",
-    ],
-    "probe": [
-        "A lot going on here. What area are you working in and what is the project?",
-        "Which crew is on this? Knowing the trade helps give a better read.",
-    ],
-    "affirm": [
-        "Clean setup. Everything staged and routed properly.",
+    "connect": [
+        "Got your photo. How does this connect to the work your crew is doing today?",
     ],
 }
 
 _MOCK_NO_PHOTO_RESPONSES: list[str] = [
-    "Send a photo of the area and let me know what you are working on.",
-    "Hard to give a good read without seeing it. Send a photo of what you are looking at.",
-    "Send a picture of the work area. That is the best way to talk through it.",
+    "Got your message. What does the area look like — can you send a photo so the full picture is clear?",
+    "Sounds like something worth a look. Can you send a photo of what you are seeing out there?",
+    "Copy that. A photo of the area would help pull up the right project documents — can you send one?",
 ]
 
 
@@ -293,8 +278,8 @@ def _classify_mock(observation: str) -> tuple[str, int, str, str]:
         if any(kw in text for kw in keywords):
             return category, severity, mode, language
 
-    # Default: moderate, ask for more info
-    return "procedural", 3, "probe", language
+    # Default: moderate, reflective question
+    return "procedural", 3, "reflect", language
 
 
 def _generate_mock_response(
@@ -313,7 +298,7 @@ def _generate_mock_response(
     if has_photo and mode in _MOCK_PHOTO_RESPONSES:
         responses = _MOCK_PHOTO_RESPONSES[mode]
     else:
-        responses = _MOCK_RESPONSES.get(mode, _MOCK_RESPONSES["probe"])
+        responses = _MOCK_RESPONSES.get(mode, _MOCK_RESPONSES["reflect"])
 
     # Use turn_number as seed for deterministic-ish selection in tests
     idx = (turn_number - 1) % len(responses)
@@ -331,9 +316,9 @@ def coach_mock(
     start = time.monotonic()
     category, severity, mode, language = _classify_mock(observation)
 
-    # Override to alert for severity >= 5
+    # High severity -> reference mode (check documents first)
     if severity >= 5:
-        mode = "alert"
+        mode = "reference"
 
     has_photo = bool(media_urls)
     response_text = _generate_mock_response(mode, has_photo, turn_number)
@@ -366,25 +351,28 @@ def _parse_classification(text: str) -> dict:
             return {
                 "hazard_category": data.get("hazard_category", "procedural"),
                 "severity": max(1, min(5, int(data.get("severity", 3)))),
-                "suggested_mode": data.get("suggested_mode", "probe"),
+                "suggested_mode": data.get("suggested_mode", "reflect"),
                 "language": data.get("language", "en"),
             }
         except (json.JSONDecodeError, ValueError, TypeError):
             pass
     return {"hazard_category": "procedural", "severity": 3,
-            "suggested_mode": "probe", "language": "en"}
+            "suggested_mode": "reflect", "language": "en"}
 
 
 def _parse_coaching_response(text: str) -> tuple[str, dict]:
     """Parse Claude's coaching response which contains message ||| assessment JSON.
 
+    The model sometimes wraps JSON in ||| ... ||| (with trailing separator).
     Returns (coaching_text, assessment_dict).
     """
     if "|||" in text:
         parts = text.split("|||", 1)
         coaching_text = parts[0].strip()
+        # Strip any trailing ||| the model may have added
+        json_part = parts[1].strip().rstrip("|").strip()
         try:
-            assessment = json.loads(parts[1].strip())
+            assessment = json.loads(json_part)
         except (json.JSONDecodeError, IndexError):
             assessment = {}
     else:
@@ -404,6 +392,11 @@ def coach_live(
     worker_tier: int = 1,
     preferred_language: str = "en",
     mentor_notes: str = "",
+    # NEW parameters for document-grounded model
+    document_context: str = "",
+    worker_name: str = "",
+    project_name: str = "",
+    project_context: str = "",
 ) -> CoachingResult:
     """Live coaching via Claude API. Single call with full prompt architecture."""
     import anthropic
@@ -413,7 +406,7 @@ def coach_live(
     start = time.monotonic()
     has_photo = bool(media_urls)
 
-    # Build system prompt from the skill spec architecture
+    # Build system prompt from the document-grounded architecture
     system_prompt = build_system_prompt(
         trade=trade or "general",
         trade_label=profile["label"],
@@ -425,6 +418,10 @@ def coach_live(
         has_photo=has_photo,
         coaching_focus=profile["coaching_focus"],
         mentor_notes=mentor_notes,
+        document_context=document_context,
+        worker_name=worker_name,
+        project_name=project_name,
+        project_context=project_context,
     )
 
     # Build user message with photo support
@@ -435,17 +432,29 @@ def coach_live(
         experience_level=experience_level,
     )
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=300,
-        temperature=0.3,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_content}],
-    )
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            temperature=0.3,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_content}],
+        )
+    except anthropic.BadRequestError as e:
+        # Gracefully handle bad requests (oversized images, invalid URLs, etc.)
+        logger.warning("Claude API BadRequest, falling back to mock: %s", e)
+        return coach_mock(observation, trade, experience_level, media_urls=None, turn_number=turn_number)
 
     prompt_tokens = resp.usage.input_tokens
     completion_tokens = resp.usage.output_tokens
     raw_text = resp.content[0].text
+
+    # Log raw response for debugging assessment parsing
+    has_separator = "|||" in raw_text
+    logger.info(
+        "Claude raw response (%d tokens, has_|||=%s): %s",
+        completion_tokens, has_separator, raw_text[:200],
+    )
 
     # Parse response + assessment
     coaching_text, assessment = _parse_coaching_response(raw_text)
@@ -455,12 +464,12 @@ def coach_live(
         coaching_text = coaching_text[:317] + "..."
 
     # Extract assessment fields
-    mode = assessment.get("response_mode", "probe")
+    mode = assessment.get("response_mode", "reflect")
     hazard_category = assessment.get("hazard_category") or "procedural"
     severity_guess = 3
-    if assessment.get("hazard_present") and mode == "alert":
-        severity_guess = 5
-    elif assessment.get("hazard_present") and mode == "nudge":
+    if assessment.get("document_referenced") and mode == "reference":
+        severity_guess = 3
+    elif hazard_category and hazard_category != "behavioral":
         severity_guess = 3
 
     elapsed = int((time.monotonic() - start) * 1000)
@@ -478,7 +487,9 @@ def coach_live(
         is_mock=False,
         has_photo=has_photo,
         turn_number=turn_number,
-        specificity_score=assessment.get("specificity_score", 0),
+        document_referenced=assessment.get("document_referenced", False),
+        trade_match=assessment.get("trade_match", True),
+        specificity_score=int(assessment.get("specificity_score") or 0),
         worker_engagement=assessment.get("worker_engagement", ""),
         worker_confidence=assessment.get("worker_confidence", ""),
         teachable_moment=assessment.get("teachable_moment", False),
@@ -499,6 +510,11 @@ def run_coaching(
     worker_id: int | None = None,
     worker_tier: int = 1,
     preferred_language: str = "en",
+    # NEW parameters for document-grounded model
+    document_context: str = "",
+    worker_name: str = "",
+    project_name: str = "",
+    project_context: str = "",
 ) -> CoachingResult:
     """Run the coaching pipeline. Uses live mode if API key is set, mock otherwise.
 
@@ -544,6 +560,42 @@ def run_coaching(
             obs.session_id = session.id
             db.commit()
 
+    # Resolve worker context for document retrieval and personalization
+    worker_project_id = None
+    if not worker_name and phone_hash:
+        from backend.models import Worker
+        worker_rec = (
+            db.query(Worker)
+            .filter(Worker.phone_hash == phone_hash)
+            .first()
+        )
+        if worker_rec:
+            worker_name = worker_rec.first_name or ""
+            worker_project_id = worker_rec.active_project_id or worker_rec.project_id
+            if not trade and worker_rec.trade:
+                trade = worker_rec.trade
+
+    # Resolve project context
+    if worker_project_id and not project_name:
+        from backend.models import Project
+        proj = db.get(Project, worker_project_id)
+        if proj:
+            project_name = proj.name
+            project_context = proj.description or ""
+
+    # Document retrieval — query before coaching
+    document_ids: list[int] = []
+    if not document_context:
+        from backend.documents.retrieval import retrieve_relevant_documents
+        doc_results = retrieve_relevant_documents(
+            db=db,
+            project_id=worker_project_id,
+            trade=trade or "general",
+            observation_text=observation_text,
+        )
+        document_context = doc_results.formatted_context
+        document_ids = doc_results.document_ids
+
     use_live = bool(settings.anthropic_api_key)
 
     if use_live:
@@ -558,6 +610,10 @@ def run_coaching(
             worker_tier=worker_tier,
             preferred_language=preferred_language,
             mentor_notes=mentor_notes,
+            document_context=document_context,
+            worker_name=worker_name,
+            project_name=project_name,
+            project_context=project_context,
         )
     else:
         logger.info("Coaching engine: mock mode, turn %d", turn_number)
@@ -569,9 +625,32 @@ def run_coaching(
             turn_number=turn_number,
         )
 
+    # Attach document references to result
+    result.document_ids = document_ids
+    result.document_referenced = bool(document_ids)
+
     # Attach session ID
     if session:
         result.session_id = session.id
+
+    # Log document references
+    if document_ids and phone_hash:
+        from backend.models import DocumentReference
+        for doc_id in document_ids:
+            ref = DocumentReference(
+                phone_hash=phone_hash,
+                session_id=session.id if session else None,
+                document_id=doc_id,
+                observation_id=observation_id,
+            )
+            db.add(ref)
+        # Update session with doc references
+        if session:
+            import json as _json
+            existing_refs = _json.loads(session.document_references_json or "[]")
+            existing_refs.extend(document_ids)
+            session.document_references_json = _json.dumps(existing_refs)
+        db.commit()
 
     # Persist CoachingResponse
     cr = CoachingResponse(
