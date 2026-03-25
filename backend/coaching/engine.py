@@ -382,6 +382,29 @@ def _parse_coaching_response(text: str) -> tuple[str, dict]:
     return coaching_text, assessment
 
 
+def _truncate_at_sentence(text: str, limit: int) -> str:
+    """Truncate text at the last sentence boundary before *limit* characters.
+
+    A sentence boundary is a period, question mark, or exclamation point
+    followed by a space or end-of-string.  If no boundary is found (single
+    run-on sentence), fall back to a hard slice with '...'.
+    """
+    candidate = text[:limit]
+    # Walk backwards from the limit looking for a sentence-ending punctuation
+    # that is followed by a space or is at the end of the slice.
+    best = -1
+    for i in range(len(candidate) - 1, -1, -1):
+        if candidate[i] in ".?!":
+            # Accept if it's the last char, or the next char is whitespace
+            if i == len(candidate) - 1 or candidate[i + 1] == " ":
+                best = i
+                break
+    if best > 0:
+        return candidate[: best + 1]
+    # No sentence boundary found — hard slice
+    return text[: limit - 3] + "..."
+
+
 def coach_live(
     observation: str,
     trade: str | None = None,
@@ -459,9 +482,9 @@ def coach_live(
     # Parse response + assessment
     coaching_text, assessment = _parse_coaching_response(raw_text)
 
-    # Validate length — truncate if over 320 chars
-    if len(coaching_text) > 320:
-        coaching_text = coaching_text[:317] + "..."
+    # Validate length — truncate at sentence boundary if over 380 chars
+    if len(coaching_text) > 380:
+        coaching_text = _truncate_at_sentence(coaching_text, 380)
 
     # Extract assessment fields
     mode = assessment.get("response_mode", "reflect")

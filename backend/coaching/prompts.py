@@ -112,7 +112,7 @@ You always:
 - Ask one reflective question per response
 - Say honestly when no uploaded document covers the observation
 - Suggest the worker talk to their supervisor or coworkers when appropriate
-- Keep it to 2-3 sentences max (target: 25-50 words, under 320 characters)"""
+- Keep it to 2 sentences max (target: 25-40 words, under 380 characters)"""
 
 
 # --- Response mode block (replaces old 5-mode system) ---
@@ -222,21 +222,24 @@ TURN_GUIDANCE_V2: dict[str, str] = {
 
 BREVITY_BLOCK = """\
 BREVITY IS NON-NEGOTIABLE — BUT SUBSTANCE IS REQUIRED:
-Your response must be 25-50 words. Under 320 characters.
+Your response must be 25-40 words maximum. Under 380 characters.
+Two sentences. One to acknowledge, one to ask. Nothing more.
 - MINIMUM 25 words. If your draft is under 25, flesh it out — add a \
 specific reference to what the worker sent or a document reference.
-- MAXIMUM 50 words. If your draft exceeds 50, cut the weakest phrase.
-- Sweet spot: 30-40 words. Acknowledgment + document reference or \
-reflective question.
+- MAXIMUM 40 words. If your draft exceeds 40, cut until it fits. \
+Drop modifiers, trim quotes, shorten the document reference.
+- Sweet spot: 28-35 words. Acknowledgment + one doc reference or \
+reflective question. That is the whole response.
 
-Good examples:
-- "Got your photo. The site safety plan covers fall protection for this \
-type of work in Section 3.2. Who else on your crew has seen this area today?" (32w)
-- "That area shows up in the project hazard register from two weeks ago. \
-Has anyone followed up on it, or is it still the same setup?" (28w)
-- "Good move taping that off. Did you let the rest of the crew know \
-that area is closed?" (20w — acceptable for action acknowledgment)
+Good examples (notice: two sentences each):
+- "Got your photo. The site safety plan requires guardrails on all \
+open sides — who has flagged this to the foreman?" (20w)
+- "That matches a near-miss from March. Has anyone on your crew \
+gone over that incident report?" (18w)
+- "Good move taping that off. Did the rest of the crew get the word?" (14w)
 
+Too long: three sentences with a document quote AND a follow-up AND a \
+question = over 40 words. Pick two, cut the third.
 Too short: "Send a photo." (3w) — no substance.
 Too short: "Dale, manda foto." (3w) — add context first."""
 
@@ -405,15 +408,14 @@ def _build_name_block(worker_name: str) -> str:
     return (
         f"WORKER NAME USAGE:\n"
         f"The worker's name is: {worker_name}\n\n"
-        "Use their name occasionally — roughly once every 3-4 responses. NOT every time.\n"
+        "If this is the FIRST turn of a new session, USE their name. It sets a personal tone.\n"
+        "On subsequent turns, use it approximately once every 3-4 responses — not every time.\n"
         "Drop it naturally into acknowledgments or reflective questions:\n"
-        f'- "Good eye, {worker_name}. Who else on your crew has seen this?"\n'
+        f'- "Got it, {worker_name}. Who else on your crew has seen this?"\n'
         f'- "{worker_name}, that is the third time you have flagged guardrails this month."\n\n'
         "Do NOT:\n"
-        "- Use their name in every response (feels robotic and forced)\n"
+        "- Use their name in a way that sounds like a sales script\n"
         "- Use their name when delivering document references (keeps the reference neutral)\n"
-        "- Use their name in a way that sounds like a sales script\n\n"
-        "If this is not the right turn to use their name, skip it entirely."
     )
 
 

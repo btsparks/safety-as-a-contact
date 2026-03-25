@@ -75,7 +75,7 @@ class TestMockResponses:
     def test_reference_response_has_substance(self):
         resp = _generate_mock_response("reference", has_photo=True)
         assert len(resp) > 20
-        assert len(resp) <= 320
+        assert len(resp) <= 380
         assert "?" in resp
 
     def test_reflect_response_asks_question(self):
@@ -229,10 +229,10 @@ class TestRunCoaching:
         assert cr is not None
         assert cr.observation_id is None
 
-    def test_response_text_under_320_chars(self, db):
-        """Response should never exceed 2 SMS segments."""
+    def test_response_text_under_380_chars(self, db):
+        """Response should never exceed 2-3 SMS segments."""
         result = run_coaching(db, "Major fire near fuel storage")
-        assert len(result.response_text) <= 320
+        assert len(result.response_text) <= 380
 
     def test_creates_session_when_phone_hash_provided(self, db):
         """Should create a coaching session when phone_hash is given."""
