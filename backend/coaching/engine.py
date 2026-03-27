@@ -511,7 +511,7 @@ def coach_live(
         has_photo=has_photo,
         turn_number=turn_number,
         document_referenced=assessment.get("document_referenced", False),
-        trade_match=assessment.get("trade_match", True),
+        trade_match=bool(assessment.get("trade_match") if assessment.get("trade_match") is not None else True),
         specificity_score=int(assessment.get("specificity_score") or 0),
         worker_engagement=assessment.get("worker_engagement", ""),
         worker_confidence=assessment.get("worker_confidence", ""),

@@ -9,6 +9,7 @@ from backend.documents.retrieval import (
     DocumentRetrievalResult,
     retrieve_relevant_documents,
     _extract_keywords,
+    ES_TO_EN_SAFETY_TERMS,
 )
 from backend.models import Company, Project, SafetyDocument, DocumentReference
 
@@ -36,6 +37,111 @@ class TestKeywordExtraction:
         assert "scaffold" in kws
         assert "fall" in kws
         assert "harness" in kws
+
+
+# --- Spanish → English keyword expansion ---
+
+class TestSpanishKeywordExpansion:
+    """Verify that Spanish safety terms produce English equivalents for retrieval."""
+
+    def test_sierra_produces_saw(self):
+        kws = _extract_keywords("La sierra")
+        assert "sierra" in kws
+        assert "saw" in kws
+
+    def test_andamio_produces_scaffold(self):
+        kws = _extract_keywords("andamio sin barandilla")
+        assert "andamio" in kws
+        assert "scaffold" in kws
+        assert "guardrail" in kws
+
+    def test_accented_proteccion_maps_to_protection(self):
+        kws = _extract_keywords("protección contra caídas")
+        assert "protection" in kws
+        assert "fall" in kws
+
+    def test_unaccented_proteccion_maps_to_protection(self):
+        kws = _extract_keywords("proteccion contra caidas")
+        assert "protection" in kws
+        assert "fall" in kws
+
+    def test_guarda_produces_guard(self):
+        kws = _extract_keywords("No tiene la guarda puesta")
+        assert "guarda" in kws
+        assert "guard" in kws
+
+    def test_full_spanish_observation_expands(self):
+        kws = _extract_keywords("Mira hay rebar expuesto cerca del andamio")
+        assert "rebar" in kws
+        assert "scaffold" in kws
+
+    def test_english_keywords_not_duplicated(self):
+        """English terms should not be double-expanded."""
+        kws = _extract_keywords("scaffold and harness check")
+        assert kws.count("scaffold") == 1
+        assert kws.count("harness") == 1
+
+    def test_lookup_table_has_minimum_coverage(self):
+        assert len(ES_TO_EN_SAFETY_TERMS) >= 50
+
+
+class TestSpanishRetrieval:
+    """Verify that Spanish observations retrieve English documents."""
+
+    @pytest.fixture(autouse=True)
+    def seed_english_docs(self, db):
+        """Seed English-language safety documents."""
+        self.saw_doc = ingest_document(
+            db=db, project_id=None,
+            title="Carpentry Safe Work Practices",
+            raw_content=(
+                "All portable circular saws must have functioning guards. "
+                "Push sticks required for table saw operations."
+            ),
+            category="trade_reference",
+            trade_tags=["carpenter", "all"],
+            hazard_tags=["saw_operations"],
+        )
+        self.fall_doc = ingest_document(
+            db=db, project_id=None,
+            title="Fall Protection Standard",
+            raw_content=(
+                "Guardrails required on all open sides of scaffolds. "
+                "Workers must use harnesses above 6 feet."
+            ),
+            category="site_safety_plan",
+            trade_tags=["all"],
+            hazard_tags=["fall_protection"],
+        )
+
+    def test_sierra_retrieves_saw_document(self, db):
+        result = retrieve_relevant_documents(
+            db=db, project_id=None, trade="carpenter",
+            observation_text="La sierra no tiene guarda",
+        )
+        assert len(result.document_ids) > 0
+        titles = [d["title"] for d in result.documents]
+        assert any("Carpentry" in t or "saw" in t.lower() for t in titles), (
+            f"Expected saw/carpentry doc, got: {titles}"
+        )
+
+    def test_andamio_retrieves_scaffold_document(self, db):
+        result = retrieve_relevant_documents(
+            db=db, project_id=None, trade="ironworker",
+            observation_text="Andamio sin barandilla en el segundo piso",
+        )
+        assert len(result.document_ids) > 0
+        titles = [d["title"] for d in result.documents]
+        assert any("Fall" in t or "scaffold" in t.lower() for t in titles), (
+            f"Expected fall/scaffold doc, got: {titles}"
+        )
+
+    def test_mixed_spanish_english_works(self, db):
+        result = retrieve_relevant_documents(
+            db=db, project_id=None, trade="carpenter",
+            observation_text="El rebar esta expuesto near the scaffold",
+        )
+        assert len(result.document_ids) > 0
 
 
 # --- Document ingestion ---

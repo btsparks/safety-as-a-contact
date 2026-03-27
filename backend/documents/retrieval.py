@@ -14,6 +14,116 @@ from backend.models import SafetyDocument
 
 logger = logging.getLogger(__name__)
 
+# ── Spanish → English safety term lookup ─────────────────────────────────
+# Maps common Spanish construction safety terms to English equivalents so
+# keyword retrieval works against English-language documents when workers
+# send observations in Spanish.
+
+ES_TO_EN_SAFETY_TERMS: dict[str, list[str]] = {
+    # Hazards and conditions
+    "caida": ["fall"],
+    "caída": ["fall"],
+    "andamio": ["scaffold"],
+    "andamiaje": ["scaffolding"],
+    "arnes": ["harness"],
+    "arnés": ["harness"],
+    "casco": ["hard hat", "helmet"],
+    "guantes": ["gloves"],
+    "lentes": ["glasses", "goggles"],
+    "gafas": ["glasses", "goggles"],
+    "chaleco": ["vest"],
+    "botas": ["boots"],
+    "barandilla": ["guardrail"],
+    "baranda": ["guardrail"],
+    "escalera": ["ladder"],
+    "techo": ["roof"],
+    "borde": ["edge"],
+    "trinchera": ["trench"],
+    "zanja": ["trench"],
+    "excavacion": ["excavation"],
+    "excavación": ["excavation"],
+    # Tools and equipment
+    "sierra": ["saw"],
+    "taladro": ["drill"],
+    "soldadura": ["welding"],
+    "grua": ["crane"],
+    "grúa": ["crane"],
+    "montacargas": ["forklift"],
+    "apuntalamiento": ["shoring"],
+    "encofrado": ["formwork"],
+    # Actions and conditions
+    "peligro": ["danger", "hazard"],
+    "riesgo": ["risk"],
+    "resbalon": ["slip"],
+    "resbalón": ["slip"],
+    "tropiezo": ["trip"],
+    "golpe": ["struck", "impact"],
+    "atrapamiento": ["caught", "pinch"],
+    "quemadura": ["burn"],
+    "descarga": ["shock"],
+    "electrocucion": ["electrocution"],
+    "electrocución": ["electrocution"],
+    "ruido": ["noise"],
+    "polvo": ["dust"],
+    "calor": ["heat"],
+    "frio": ["cold"],
+    "frío": ["cold"],
+    "fuego": ["fire"],
+    "explosion": ["explosion"],
+    "explosión": ["explosion"],
+    # PPE and procedures
+    "proteccion": ["protection"],
+    "protección": ["protection"],
+    "seguridad": ["safety"],
+    "herramienta": ["tool"],
+    "equipo": ["equipment"],
+    "guarda": ["guard"],
+    "bloqueo": ["lockout"],
+    "etiqueta": ["tagout"],
+    "permiso": ["permit"],
+    "inspeccion": ["inspection"],
+    "inspección": ["inspection"],
+    "senalizacion": ["signage"],
+    "señalización": ["signage"],
+    "limpieza": ["housekeeping", "cleanup"],
+    "orden": ["housekeeping"],
+    "escombros": ["debris"],
+    "basura": ["trash"],
+    # Body and ergonomics
+    "espalda": ["back"],
+    "levantamiento": ["lifting"],
+    "peso": ["weight", "heavy"],
+    "madera": ["lumber", "wood"],
+    "concreto": ["concrete"],
+    "acero": ["steel"],
+    "clavo": ["nail"],
+    "tornillo": ["bolt"],
+    "tubo": ["pipe"],
+    "tuberia": ["pipe"],
+    "tubería": ["pipe"],
+    "rebar": ["rebar"],
+}
+
+# Pre-built accent-stripped lookup for matching accented input
+_ACCENT_MAP = str.maketrans("áéíóúñ", "aeionn")
+
+
+def _strip_accents(word: str) -> str:
+    """Strip common Spanish accents for lookup matching."""
+    return word.translate(_ACCENT_MAP)
+
+
+# Build a normalized lookup: accent-stripped key → list of English terms
+_ES_NORMALIZED: dict[str, list[str]] = {}
+for _es, _en_list in ES_TO_EN_SAFETY_TERMS.items():
+    _norm = _strip_accents(_es.lower())
+    if _norm not in _ES_NORMALIZED:
+        _ES_NORMALIZED[_norm] = []
+    for _en in _en_list:
+        if _en not in _ES_NORMALIZED[_norm]:
+            _ES_NORMALIZED[_norm].append(_en)
+
+
 # Priority order for document categories — incident reports and lessons learned
 # are most compelling to workers and should surface first when available.
 CATEGORY_PRIORITY = [
@@ -37,8 +147,12 @@ class DocumentRetrievalResult:
 
 
 def _extract_keywords(text: str) -> list[str]:
-    """Extract meaningful keywords from observation text for matching."""
-    # Remove common stop words, keep safety-relevant terms
+    """Extract meaningful keywords from observation text for matching.
+
+    After extracting keywords, Spanish terms are looked up in
+    ES_TO_EN_SAFETY_TERMS and their English equivalents are appended.
+    This allows Spanish observations to match English-language documents.
+    """
     stop_words = {
         "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
         "have", "has", "had", "do", "does", "did", "will", "would", "shall",
@@ -58,11 +172,37 @@ def _extract_keywords(text: str) -> list[str]:
         "por", "para", "que", "es", "hay", "ya", "no", "si", "se", "lo",
         "su", "más", "pero", "como", "sin", "sobre", "este", "esta",
         "esto", "ese", "esa", "eso", "mi", "tu", "mira",
+        # Additional Spanish stop words
+        "tiene", "tiene", "puesta", "dije", "está",
     }
     words = text.lower().split()
     # Keep words 3+ chars that aren't stop words
-    return [w.strip(".,!?()\"'") for w in words
-            if len(w) > 2 and w.strip(".,!?()\"'") not in stop_words]
+    base_keywords = [w.strip(".,!?()\"'") for w in words
+                     if len(w) > 2 and w.strip(".,!?()\"'") not in stop_words]
+
+    # Expand Spanish keywords with English equivalents
+    expanded: list[str] = []
+    seen: set[str] = set()
+    for kw in base_keywords:
+        if kw not in seen:
+            expanded.append(kw)
+            seen.add(kw)
+        # Look up the accent-stripped form in the normalized table.
+        # Also try stripping trailing 's' or 'es' for basic plural handling.
+        norm = _strip_accents(kw)
+        candidates = [norm]
+        if norm.endswith("es") and len(norm) > 3:
+            candidates.append(norm[:-2])
+        if norm.endswith("s") and len(norm) > 3:
+            candidates.append(norm[:-1])
+        for candidate in candidates:
+            en_terms = _ES_NORMALIZED.get(candidate, [])
+            for en in en_terms:
+                if en not in seen:
+                    expanded.append(en)
+                    seen.add(en)
+
+    return expanded
 
 
 def _sort_by_category_priority(docs: list[SafetyDocument]) -> list[SafetyDocument]:
