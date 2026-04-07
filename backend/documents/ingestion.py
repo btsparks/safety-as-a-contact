@@ -43,8 +43,9 @@ def _split_into_sections(raw_content: str) -> list[tuple[str, str]]:
 
     for line in lines:
         md_match = re.match(md_pattern, line.strip())
-        # Also match "Section 1.2: Title" or "1. Title" patterns
-        num_match = re.match(r'^(\d+[\.\d]*\.?\s+\S.*)$', line.strip())
+        # Match section headings like "1.0 Title" or "3.2.1 Title" — require
+        # X.Y format to avoid splitting on numbered list items ("3. Use PPE")
+        num_match = re.match(r'^(\d+\.\d+[\.\d]*\s+\S.*)$', line.strip())
 
         if md_match:
             # Save previous section
@@ -135,6 +136,14 @@ def ingest_document(
     documents: list[SafetyDocument] = []
     for section_label, section_content in sections:
         if not section_content.strip():
+            continue
+        # Skip very short sections — likely list items or fragment headings
+        if len(section_content.strip()) < 80:
+            logger.debug(
+                "Skipping short section '%s' (%d chars)",
+                (section_label or "untitled")[:50],
+                len(section_content.strip()),
+            )
             continue
 
         attribution = _generate_attribution(title, section_label, category)

@@ -107,11 +107,13 @@ def _join_split_section_numbers(text: str) -> str:
             # Look ahead for a non-empty title line
             if i + 1 < len(lines) and lines[i + 1].strip():
                 next_line = lines[i + 1].strip()
-                # Only join if next line looks like a title (starts with letter,
-                # reasonably short, not a continuation sentence)
+                # Only join if next line looks like a heading (starts with letter,
+                # short enough to be a title, not ending in period which
+                # indicates a sentence rather than a heading)
                 if (
                     re.match(r"^[A-Za-z]", next_line)
-                    and len(next_line) < 200
+                    and len(next_line) < 80
+                    and not next_line.rstrip().endswith(".")
                 ):
                     result.append(f"{stripped} {next_line}")
                     i += 2

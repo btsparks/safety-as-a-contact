@@ -815,13 +815,13 @@ class TestDocumentIngestion:
             project_id=None,
             title="Test Document",
             raw_content="""## Section One
-Content for section one about fall protection and harness inspection.
+Content for section one about fall protection and harness inspection. All workers on elevated platforms must use personal fall arrest systems with approved anchorage points.
 
 ## Section Two
-Content for section two about ladder safety and three-point contact.
+Content for section two about ladder safety and three-point contact. Ladders must extend 3 feet above the landing surface and be secured at the top to prevent displacement.
 
 ## Section Three
-Content for section three about scaffold erection.""",
+Content for section three about scaffold erection. All scaffolds must be erected under supervision of a competent person and inspected before each work shift.""",
             category="company_procedure",
             trade_tags=["all"],
             hazard_tags=["fall_protection"],
@@ -837,7 +837,7 @@ Content for section three about scaffold erection.""",
             db,
             project_id=None,
             title="OSHA 1926.451 Scaffolding",
-            raw_content="All scaffolds must be erected under supervision of a competent person.",
+            raw_content="All scaffolds must be erected under supervision of a competent person. Scaffolds must be inspected before each work shift and after any event that could affect structural integrity.",
             category="osha_standard",
         )
         assert len(docs) == 1

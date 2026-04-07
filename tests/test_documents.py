@@ -95,8 +95,8 @@ class TestSpanishRetrieval:
             db=db, project_id=None,
             title="Carpentry Safe Work Practices",
             raw_content=(
-                "All portable circular saws must have functioning guards. "
-                "Push sticks required for table saw operations."
+                "All portable circular saws must have functioning guards in place at all times during operation. "
+                "Push sticks required for table saw operations when cutting material narrower than 6 inches."
             ),
             category="trade_reference",
             trade_tags=["carpenter", "all"],
@@ -106,8 +106,8 @@ class TestSpanishRetrieval:
             db=db, project_id=None,
             title="Fall Protection Standard",
             raw_content=(
-                "Guardrails required on all open sides of scaffolds. "
-                "Workers must use harnesses above 6 feet."
+                "Guardrails required on all open sides and ends of scaffolds above 10 feet. "
+                "Workers must use full-body harnesses with approved anchorage above 6 feet on all elevated platforms."
             ),
             category="site_safety_plan",
             trade_tags=["all"],
@@ -153,7 +153,7 @@ class TestIngestion:
             db=db,
             project_id=None,
             title="Test OSHA Standard",
-            raw_content="Fall protection is required above 6 feet on all scaffolds.",
+            raw_content="Fall protection is required above 6 feet on all scaffolds. Workers must wear full-body harnesses with double locking snap hooks when working on open-sided platforms.",
             category="osha_standard",
         )
         assert len(docs) == 1
@@ -163,13 +163,13 @@ class TestIngestion:
 
     def test_ingest_multi_section_markdown(self, db):
         content = """## Fall Protection
-Workers must use harnesses above 6 feet.
+Workers must use full-body harnesses with double locking snap hooks when working above 6 feet on any open-sided platform or scaffold.
 
 ## Scaffolding
-All scaffolds must have guardrails.
+All scaffolds must have guardrails on all open sides and ends. Cross bracing is not acceptable as a guardrail. Toe boards required on all platforms.
 
 ## Ladder Safety
-Ladders must extend 3 feet above the landing."""
+Ladders must extend at least 3 feet above the landing surface. Workers must maintain three-point contact at all times while climbing or descending."""
         docs = ingest_document(
             db=db,
             project_id=None,
@@ -187,7 +187,7 @@ Ladders must extend 3 feet above the landing."""
             db=db,
             project_id=None,
             title="Rigging Procedure",
-            raw_content="Pre-lift checklist must be completed before every pick.",
+            raw_content="Pre-lift checklist must be completed before every pick. Verify load weight, sling capacity, and rigging hardware condition. Signal person must be designated and visible.",
             category="company_procedure",
             trade_tags=["ironworker", "operating_engineer"],
         )
@@ -211,7 +211,7 @@ Ladders must extend 3 feet above the landing."""
             db=db,
             project_id=project.id,
             title="Pump Station Safety Plan",
-            raw_content="Site-specific fall protection requirements.",
+            raw_content="Site-specific fall protection requirements for the pump station project. All workers on elevated platforms must use personal fall arrest systems anchored to approved tie-off points.",
             category="site_safety_plan",
         )
         assert docs[0].project_id == project.id
@@ -231,7 +231,7 @@ Ladders must extend 3 feet above the landing."""
             db=db,
             project_id=None,
             title="Incident Report 2023-041",
-            raw_content="Worker lacerated hand on unguarded grinder.",
+            raw_content="Worker lacerated hand on unguarded angle grinder during metal prep work. Guard had been removed for a previous cut and was not reinstalled before resuming operations.",
             category="incident_report",
         )
         assert "Incident Report" in docs[0].source_attribution
@@ -242,7 +242,7 @@ Ladders must extend 3 feet above the landing."""
             db=db,
             project_id=None,
             title="Incident #2014-037",
-            raw_content="Hand laceration from unguarded angle grinder during metal prep.",
+            raw_content="Hand laceration from unguarded angle grinder during metal prep. Worker was cutting rebar supports when the guard-less grinder kicked back, causing a 3-inch laceration to the left hand.",
             category="incident_report",
             hazard_tags=["grinder", "laceration", "tool_guarding"],
         )
@@ -265,11 +265,11 @@ class TestRetrieval:
             title="Site Safety Plan",
             raw_content=(
                 "## Fall Protection\n"
-                "Workers must wear harnesses above 6 feet on all scaffolds.\n"
-                "Guardrails required on all open-sided platforms.\n\n"
+                "Workers must wear full-body harnesses with double locking snap hooks above 6 feet on all scaffolds. "
+                "Guardrails required on all open-sided platforms. Cross bracing is not an acceptable substitute for guardrails.\n\n"
                 "## Housekeeping\n"
-                "Work areas must be kept clean and free of debris.\n"
-                "Materials must be properly stored."
+                "Work areas must be kept clean and free of debris at all times. Materials must be properly stored and secured. "
+                "Walkways and emergency exits must remain clear and unobstructed during all work shifts."
             ),
             category="site_safety_plan",
             trade_tags=["all"],
@@ -278,7 +278,7 @@ class TestRetrieval:
             db=db,
             project_id=None,
             title="Incident #2023-041",
-            raw_content="Worker lacerated hand on unguarded angle grinder during metal prep work.",
+            raw_content="Worker lacerated hand on unguarded angle grinder during metal prep work. Guard had been removed for a previous cut and not reinstalled before resuming operations.",
             category="incident_report",
             trade_tags=["all"],
             hazard_tags=["grinder", "laceration"],
@@ -352,7 +352,7 @@ class TestDocumentAPI:
     def test_upload_endpoint(self, client, db):
         resp = client.post("/api/documents/upload", json={
             "title": "API Test Document",
-            "content": "Fall protection required on all elevated work.",
+            "content": "Fall protection is required on all elevated work surfaces above 6 feet. Workers must use personal fall arrest systems with approved anchorage points at all times.",
             "category": "company_procedure",
         })
         assert resp.status_code == 200
@@ -364,7 +364,7 @@ class TestDocumentAPI:
         # Upload first
         client.post("/api/documents/upload", json={
             "title": "Fall Protection Standard",
-            "content": "Workers must use harnesses above 6 feet.",
+            "content": "Workers must use full-body harnesses with approved anchorage above 6 feet. All personal fall arrest systems must be inspected before each use by a competent person.",
             "category": "osha_standard",
         })
         # Search
@@ -380,7 +380,7 @@ class TestDocumentAPI:
     def test_list_endpoint(self, client, db):
         client.post("/api/documents/upload", json={
             "title": "Test Doc",
-            "content": "Content here.",
+            "content": "Carpentry trade reference covering proper use of circular saws, table saws, and reciprocating saws. All guards must be in place and functioning before operation.",
             "category": "trade_reference",
         })
         resp = client.get("/api/documents/list")
@@ -391,7 +391,7 @@ class TestDocumentAPI:
     def test_list_filtered_by_category(self, client, db):
         client.post("/api/documents/upload", json={
             "title": "Incident X",
-            "content": "Incident details here.",
+            "content": "Worker sustained a bruised right knee after tripping over unsecured air hoses in the main corridor. Hoses were not routed through overhead hangers as required by site safety plan.",
             "category": "incident_report",
         })
         resp = client.get("/api/documents/list?category=incident_report")
