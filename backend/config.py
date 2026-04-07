@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     session_pause_minutes: int = 30     # pause after 30 min no reply
     session_timeout_minutes: int = 240  # new session after 4 hours
 
+    # Demo mode — allows console access in production
+    demo_mode: bool = False
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @property
