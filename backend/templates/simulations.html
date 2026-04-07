@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Longitudinal Simulations — Safety as a Contact</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+    :root {
+      --amber: #E8922A;
+      --amber-light: #F5C882;
+      --slate: #1E2A3B;
+      --concrete: #F2F0EC;
+      --green: #3A7D44;
+      --iron: #4A4A4A;
+      --red: #C0392B;
+      --blue: #2E6B8A;
+      --white: #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--concrete);
+      color: var(--iron);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--slate);
+      color: var(--white);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'DM Sans', sans-serif;
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header .nav { display: flex; gap: 12px; align-items: center; }
+    header .nav a {
+      color: var(--white); text-decoration: none; font-size: 12px;
+      padding: 5px 14px; border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px; font-family: 'Inter', sans-serif;
+    }
+    header .nav a:hover { background: rgba(255,255,255,0.1); }
+    .badge { background: var(--amber); color: var(--slate); padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    .section-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--slate);
+      margin-bottom: 16px;
+    }
+
+    /* Persona cards */
+    .persona-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 32px; }
+
+    .persona-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #E5E7EB;
+    }
+
+    .persona-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .persona-name { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 700; color: var(--slate); }
+    .persona-meta { font-size: 12px; color: #64748B; }
+
+    .persona-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tag { padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+    .tag.trade { background: #DBEAFE; color: var(--blue); }
+    .tag.lang { background: #FEF3C7; color: #92400E; }
+    .tag.exp { background: #E0E7FF; color: #4338CA; }
+    .tag.engagement { background: #D1FAE5; color: var(--green); }
+
+    .persona-desc { font-size: 13px; line-height: 1.6; color: var(--iron); margin-bottom: 12px; }
+
+    .persona-arc {
+      background: var(--concrete);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .persona-arc-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
+    .persona-arc-text { font-size: 12px; color: var(--iron); line-height: 1.5; }
+
+    .sim-controls { display: flex; gap: 8px; align-items: center; }
+    .sim-controls label { font-size: 11px; color: #64748B; }
+    .sim-controls input {
+      font-family: 'Inter', sans-serif; font-size: 12px;
+      padding: 4px 8px; border: 1px solid #ccc; border-radius: 5px;
+      width: 60px; text-align: center;
+    }
+    .sim-btn {
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+      padding: 8px 16px; background: var(--amber); color: var(--slate);
+      border: none; border-radius: 8px; cursor: pointer; margin-left: auto;
+    }
+    .sim-btn:hover { background: var(--amber-light); }
+    .sim-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Tier progression chart */
+    .tier-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 60px;
+      margin: 12px 0;
+    }
+    .tier-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      min-width: 14px;
+      transition: height 0.3s ease;
+    }
+    .tier-bar.t1 { background: #94A3B8; }
+    .tier-bar.t2 { background: var(--blue); }
+    .tier-bar.t3 { background: var(--amber); }
+    .tier-bar.t4 { background: var(--green); }
+
+    /* Simulation results */
+    .results-panel {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #E5E7EB;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .results-panel.visible { display: block; }
+
+    .result-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .result-title { font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 700; color: var(--slate); }
+    .result-elapsed { font-size: 12px; color: #64748B; }
+
+    .session-accordion { margin-bottom: 8px; }
+
+    .session-header {
+      background: var(--concrete);
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .session-header:hover { background: #E5E7EB; }
+
+    .session-num { font-weight: 700; font-family: 'DM Sans', sans-serif; color: var(--slate); min-width: 80px; }
+
+    .tier-badge-sm {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      font-size: 10px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    }
+    .tier-badge-sm.t1 { background: #94A3B8; color: var(--white); }
+    .tier-badge-sm.t2 { background: var(--blue); color: var(--white); }
+    .tier-badge-sm.t3 { background: var(--amber); color: var(--slate); }
+    .tier-badge-sm.t4 { background: var(--green); color: var(--white); }
+
+    .session-arrow { margin-left: auto; transition: transform 0.2s; }
+    .session-arrow.open { transform: rotate(90deg); }
+
+    .session-body {
+      display: none;
+      padding: 12px 14px;
+      border: 1px solid #E5E7EB;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+    }
+    .session-body.open { display: block; }
+
+    .turn-msg {
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 85%;
+    }
+    .turn-msg.worker { background: #E5E7EB; color: var(--slate); }
+    .turn-msg.coach { background: var(--amber); color: var(--slate); margin-left: auto; }
+    .turn-msg .turn-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #888; margin-bottom: 2px; }
+    .turn-msg.coach .turn-label { color: rgba(30,42,59,0.6); }
+
+    .mode-badge-sm {
+      display: inline-block; padding: 1px 6px; border-radius: 6px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; margin-left: 6px;
+    }
+    .mode-badge-sm.alert { background: #FECDD3; color: var(--red); }
+    .mode-badge-sm.validate { background: #D1FAE5; color: var(--green); }
+    .mode-badge-sm.nudge { background: #FEF3C7; color: #92400E; }
+    .mode-badge-sm.probe { background: #DBEAFE; color: var(--blue); }
+    .mode-badge-sm.affirm { background: #E0E7FF; color: #4338CA; }
+
+    .mentor-notes-block {
+      background: #F8FAFC;
+      border-left: 3px solid var(--amber);
+      padding: 10px 12px;
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--iron);
+      font-style: italic;
+      margin-top: 8px;
+    }
+
+    .final-profile {
+      background: var(--concrete);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+    .profile-stat { text-align: center; background: var(--white); border-radius: 6px; padding: 8px; }
+    .profile-stat .num { font-size: 18px; font-weight: 700; font-family: 'DM Sans', sans-serif; color: var(--slate); }
+    .profile-stat .lbl { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Past runs */
+    .past-runs { margin-top: 32px; }
+    .run-row {
+      background: var(--white); border-radius: 8px; padding: 12px 16px;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+      cursor: pointer; border: 1px solid #E5E7EB;
+    }
+    .run-row:hover { border-color: var(--amber); }
+
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(30,42,59,0.7); display: none; z-index: 100;
+      align-items: center; justify-content: center; flex-direction: column;
+    }
+    .loading-overlay.visible { display: flex; }
+    .loading-text { color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 18px; margin-top: 16px; }
+    .loading-sub { color: #94A3B8; font-size: 13px; margin-top: 4px; }
+
+    .spinner {
+      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2);
+      border-top-color: var(--amber); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <h1>Longitudinal Simulations</h1>
+      <span class="badge">TRAINING</span>
+    </div>
+    <div class="nav">
+      <a href="/console">Console</a>
+      <a href="/training">Training</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Persona Cards -->
+    <div class="section-title">Test Personas</div>
+    <div class="persona-grid" id="personaGrid"></div>
+
+    <!-- Active Simulation Results -->
+    <div class="results-panel" id="resultsPanel">
+      <div class="result-header">
+        <div class="result-title" id="resultTitle">Simulation Results</div>
+        <div class="result-elapsed" id="resultElapsed"></div>
+      </div>
+
+      <div class="section-title" style="font-size:13px;">Tier Progression</div>
+      <div class="tier-chart" id="tierChart"></div>
+
+      <div id="sessionsContainer"></div>
+
+      <div class="final-profile" id="finalProfile"></div>
+    </div>
+
+    <!-- Past Runs -->
+    <div class="past-runs">
+      <div class="section-title">Past Simulations</div>
+      <div id="pastRuns"><p style="color:#888;font-size:13px;">Loading...</p></div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Running simulation...</div>
+    <div class="loading-sub" id="loadingSub">This may take a few minutes</div>
+  </div>
+
+  <script>
+    const API = '/api/training';
+    const TIER_NAMES = { 1: 'Developing', 2: 'Building', 3: 'Proficient', 4: 'Mentor' };
+
+    // Load personas on page load
+    async function loadPersonas() {
+      try {
+        const resp = await fetch(`${API}/personas`);
+        const data = await resp.json();
+        renderPersonaCards(data.personas);
+      } catch (err) {
+        console.error('Failed to load personas:', err);
+      }
+    }
+
+    function renderPersonaCards(personas) {
+      const grid = document.getElementById('personaGrid');
+      grid.innerHTML = '';
+
+      personas.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'persona-card';
+        card.innerHTML = `
+          <div class="persona-header">
+            <div class="persona-name">${p.name}</div>
+            <div class="persona-meta">${p.phone}</div>
+          </div>
+          <div class="persona-tags">
+            <span class="tag trade">${p.trade}</span>
+            <span class="tag lang">${p.language.toUpperCase()}</span>
+            <span class="tag exp">${p.experience_level}</span>
+            <span class="tag engagement">${p.engagement_style} engagement</span>
+          </div>
+          <div class="persona-desc">${p.personality}</div>
+          <div class="persona-arc">
+            <div class="persona-arc-label">Growth Arc</div>
+            <div class="persona-arc-text">${p.growth_trajectory}</div>
+          </div>
+          <div class="sim-controls">
+            <label>Sessions</label>
+            <input type="number" id="sessions_${p.key}" value="10" min="1" max="30">
+            <label>Turns</label>
+            <input type="number" id="turns_${p.key}" value="4" min="2" max="8">
+            <button class="sim-btn" onclick="runSimulation('${p.key}', '${p.name}')">Run Simulation</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function runSimulation(key, name) {
+      const sessions = parseInt(document.getElementById(`sessions_${key}`).value) || 10;
+      const turns = parseInt(document.getElementById(`turns_${key}`).value) || 4;
+
+      // Show loading
+      document.getElementById('loadingText').textContent = `Running ${name}'s simulation...`;
+      document.getElementById('loadingSub').textContent = `${sessions} sessions x ${turns} turns — this may take a few minutes`;
+      document.getElementById('loadingOverlay').classList.add('visible');
+
+      // Disable all sim buttons
+      document.querySelectorAll('.sim-btn').forEach(b => b.disabled = true);
+
+      try {
+        const resp = await fetch(`${API}/simulate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ persona: key, num_sessions: sessions, turns_per_session: turns }),
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+
+        renderResults(data);
+        loadPastRuns();
+      } catch (err) {
+        alert('Simulation failed: ' + err.message);
+      } finally {
+        document.getElementById('loadingOverlay').classList.remove('visible');
+        document.querySelectorAll('.sim-btn').forEach(b => b.disabled = false);
+      }
+    }
+
+    function renderResults(data) {
+      const panel = document.getElementById('resultsPanel');
+      panel.classList.add('visible');
+
+      document.getElementById('resultTitle').textContent = `${data.persona_name} — ${data.num_sessions} Sessions`;
+      document.getElementById('resultElapsed').textContent = `${data.elapsed_seconds}s`;
+
+      // Tier progression chart
+      const chart = document.getElementById('tierChart');
+      chart.innerHTML = '';
+      data.tier_progression.forEach((tier, i) => {
+        const bar = document.createElement('div');
+        bar.className = `tier-bar t${tier}`;
+        bar.style.height = `${tier * 25}%`;
+        bar.title = `Session ${i + 1}: Tier ${tier} (${TIER_NAMES[tier]})`;
+        chart.appendChild(bar);
+      });
+
+      // Session accordions
+      const container = document.getElementById('sessionsContainer');
+      container.innerHTML = '';
+
+      data.sessions.forEach(session => {
+        const accordion = document.createElement('div');
+        accordion.className = 'session-accordion';
+
+        const header = document.createElement('div');
+        header.className = 'session-header';
+        header.innerHTML = `
+          <span class="session-num">Session ${session.session_number}</span>
+          <span class="tier-badge-sm t${session.tier_at_start}">${session.tier_at_start}</span>
+          <span style="font-size:11px;color:#888;">→</span>
+          <span class="tier-badge-sm t${session.tier_at_end}">${session.tier_at_end}</span>
+          ${session.photo_id ? '<span style="font-size:11px;color:#888;">with photo</span>' : ''}
+          <span class="session-arrow">▶</span>
+        `;
+
+        const body = document.createElement('div');
+        body.className = 'session-body';
+
+        let turnsHtml = '';
+        session.turns.forEach(turn => {
+          if (turn.role === 'worker') {
+            turnsHtml += `<div class="turn-msg worker"><div class="turn-label">Worker${turn.has_photo ? ' + photo' : ''}</div>${turn.text}</div>`;
+          } else {
+            const modeClass = turn.mode || 'probe';
+            turnsHtml += `<div class="turn-msg coach"><div class="turn-label">Coach <span class="mode-badge-sm ${modeClass}">${modeClass}</span></div>${turn.text}</div>`;
+          }
+        });
+
+        if (session.mentor_notes) {
+          turnsHtml += `<div class="mentor-notes-block"><strong>Mentor Notes:</strong> ${session.mentor_notes}</div>`;
+        }
+
+        body.innerHTML = turnsHtml;
+
+        header.onclick = () => {
+          body.classList.toggle('open');
+          header.querySelector('.session-arrow').classList.toggle('open');
+        };
+
+        accordion.appendChild(header);
+        accordion.appendChild(body);
+        container.appendChild(accordion);
+      });
+
+      // Final profile
+      const fp = data.final_profile;
+      if (fp) {
+        document.getElementById('finalProfile').innerHTML = `
+          <div class="section-title" style="font-size:13px;">Final Profile</div>
+          <div class="profile-grid">
+            <div class="profile-stat"><div class="num">${fp.current_tier}</div><div class="lbl">Tier</div></div>
+            <div class="profile-stat"><div class="num">${fp.total_sessions}</div><div class="lbl">Sessions</div></div>
+            <div class="profile-stat"><div class="num">${fp.total_turns}</div><div class="lbl">Turns</div></div>
+            <div class="profile-stat"><div class="num">${fp.avg_specificity}</div><div class="lbl">Avg Spec</div></div>
+            <div class="profile-stat"><div class="num">${fp.hazard_accuracy_rate}%</div><div class="lbl">Accuracy</div></div>
+          </div>
+          ${fp.mentor_notes ? `<div class="mentor-notes-block" style="margin-top:12px;"><strong>Final Mentor Notes:</strong> ${fp.mentor_notes}</div>` : ''}
+        `;
+      }
+
+      // Scroll to results
+      panel.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    async function loadPastRuns() {
+      try {
+        const resp = await fetch(`${API}/simulations`);
+        const data = await resp.json();
+
+        const container = document.getElementById('pastRuns');
+        if (!data.simulations || data.simulations.length === 0) {
+          container.innerHTML = '<p style="color:#888;font-size:13px;">No simulations yet. Run one above.</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        data.simulations.forEach(run => {
+          const row = document.createElement('div');
+          row.className = 'run-row';
+
+          // Mini tier chart
+          let miniChart = '';
+          (run.tier_progression || []).forEach(t => {
+            miniChart += `<div style="width:8px;height:${t*6}px;border-radius:2px;" class="tier-bar t${t}"></div>`;
+          });
+
+          const date = run.started_at ? new Date(run.started_at).toLocaleString() : '';
+
+          row.innerHTML = `
+            <div style="font-weight:600;font-family:'DM Sans',sans-serif;min-width:80px;">${run.persona_name}</div>
+            <div style="font-size:12px;color:#888;">${run.num_sessions} sessions</div>
+            <div style="display:flex;align-items:flex-end;gap:2px;height:24px;">${miniChart}</div>
+            <div style="font-size:11px;color:#888;margin-left:auto;">${date}</div>
+            <div style="font-size:11px;color:#888;">${run.elapsed_seconds}s</div>
+          `;
+
+          row.onclick = () => loadSimulationDetail(run.id);
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Failed to load past runs:', err);
+      }
+    }
+
+    async function loadSimulationDetail(runId) {
+      try {
+        const resp = await fetch(`${API}/simulation/${runId}`);
+        const data = await resp.json();
+        renderResults(data);
+      } catch (err) {
+        console.error('Failed to load simulation:', err);
+      }
+    }
+
+    // Init
+    loadPersonas();
+    loadPastRuns();
+  </script>
+</body>
+</html>

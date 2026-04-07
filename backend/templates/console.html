@@ -234,6 +234,23 @@
     .input-bar button:hover { background: var(--amber-light); }
     .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .random-photo-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 12px;
+      background: var(--slate) !important;
+      color: var(--white) !important;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+    }
+    .random-photo-btn:hover { background: #2d3f54 !important; }
+
     /* Right: Metadata panel */
     .meta-panel {
       width: 380px;
@@ -481,6 +498,12 @@
     <div class="chat-panel">
       <div class="phone-bar">
         <input type="text" id="phoneInput" value="+18015559999" placeholder="+1XXXXXXXXXX">
+        <select id="personaSelect" onchange="applyPersona()" style="font-family:'Inter',sans-serif;font-size:12px;padding:6px 8px;border:1px solid #ccc;border-radius:6px;background:var(--white);color:var(--iron);max-width:160px;">
+          <option value="">-- Persona --</option>
+          <option value="miguel">Miguel (Laborer/ES)</option>
+          <option value="jake">Jake (Ironworker/EN)</option>
+          <option value="ray">Ray (Op. Engineer/EN)</option>
+        </select>
         <button onclick="loadConversation()">Load</button>
         <button class="btn-danger" onclick="resetData()">Reset All</button>
         <button onclick="loadStats()">Stats</button>
@@ -545,9 +568,9 @@
       <div class="messages" id="messagesContainer"></div>
 
       <div class="input-bar" style="flex-wrap: wrap;">
-        <div style="flex: 0 0 100%; display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
+        <div style="flex: 0 0 100%; display: flex; gap: 6px; margin-bottom: 6px; align-items: center; position: relative; z-index: 1;">
           <input type="text" id="imageInput" placeholder="Photo URL (optional)" style="flex: 1; font-size: 12px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; color: #888;">
-          <button onclick="randomPhoto()" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:6px 12px;background:var(--slate);color:var(--white);border:none;border-radius:6px;cursor:pointer;white-space:nowrap;" title="Load a random construction site photo from the test bank">Random Photo</button>
+          <button type="button" class="random-photo-btn" onclick="randomPhoto()" title="Load a random construction site photo from the test bank">Random Photo</button>
         </div>
         <div id="photoScenario" style="flex: 0 0 100%; display: none; margin-bottom: 6px; font-size: 11px; color: #64748B; padding: 0 4px;">
           <span id="scenarioText"></span>
@@ -965,6 +988,27 @@
       }
 
       document.getElementById('messageInput').focus();
+    }
+
+    // Persona definitions for quick-fill
+    const PERSONAS = {
+      miguel: { phone: '+19998880001', trade: 'laborer', experience: 'entry', lang: 'es' },
+      jake:   { phone: '+19998880002', trade: 'ironworker', experience: 'intermediate', lang: 'en' },
+      ray:    { phone: '+19998880003', trade: 'operating_engineer', experience: 'entry', lang: 'en' },
+    };
+
+    function applyPersona() {
+      const key = document.getElementById('personaSelect').value;
+      if (!key || !PERSONAS[key]) return;
+      const p = PERSONAS[key];
+      document.getElementById('phoneInput').value = p.phone;
+      document.getElementById('tradeSelect').value = p.trade;
+      document.getElementById('experienceSelect').value = p.experience;
+      document.getElementById('langSelect').value = p.lang;
+      document.getElementById('tierSelect').value = '';
+      // Clear chat and reload profile for this persona
+      document.getElementById('messagesContainer').innerHTML = '';
+      loadConversation();
     }
 
     // Focus message input on load
