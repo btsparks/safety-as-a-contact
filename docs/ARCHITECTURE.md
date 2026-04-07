@@ -4,178 +4,188 @@ SMS-based behavioral safety coaching platform for construction workers.
 
 ## Tech Stack
 
-- **Backend**: Python (FastAPI) + SQLAlchemy + PostgreSQL
-- **SMS**: Twilio Programmable Messaging (A2P 10DLC registered)
-- **AI**: Anthropic Claude API for coaching response generation
-- **Frontend**: Astro + Tailwind CSS (marketing site + admin portal)
-- **Hosting**: Railway or Render
+- **Backend**: Python 3.11+ / FastAPI / SQLAlchemy 2.0 / SQLite (dev) / PostgreSQL (prod)
+- **SMS**: Telnyx REST API via httpx (no SDK dependency)
+- **AI**: Anthropic Claude API — Haiku for coaching, Sonnet for arc evaluation
+- **Frontend**: Astro + Tailwind CSS (marketing site)
+- **Hosting**: Render (backend) + Vercel (marketing site)
 - **Domain**: safetyasacontact.com
 
 ## System Architecture
 
 ### Inbound Flow (Worker Observation)
-1. Worker texts Twilio short code with hazard observation
-2. Twilio webhook hits `POST /api/sms/inbound`
-3. Webhook signature validation + rate limiting
-4. Consent check: verify phone_number is in active consent_records
-5. Coaching engine classifies message (hazard observation vs question vs opt-in/out)
-6. If observation: extract trade context, hazard category, severity
-7. Call Claude API with behavioral coaching system prompt
-8. Validate response (length, tone, compliance)
-9. Send via Twilio Messaging Service (async, tracked via message_log)
+1. Worker texts Telnyx 10DLC number with hazard observation (text and/or photo)
+2. Telnyx webhook hits `POST /api/sms/inbound` with JSON payload
+3. Webhook signature validation (ed25519) + rate limiting
+4. Consent check: verify phone_number has active consent record
+5. If MMS: download media immediately (Telnyx URLs are temporary)
+6. Coaching engine retrieves relevant safety documents for context
+7. Call Claude Haiku with document-grounded system prompt + worker context
+8. Parse response: coaching text + assessment metadata (split on `|||`)
+9. Truncate at sentence boundary if > 380 chars
+10. Send response via Telnyx REST API, log to message_log
 
-### Outbound Flow (Proactive Nudges)
-1. Scheduler triggers every 24/48 hours (configurable per company)
-2. Look up workers with active consent + recent observation patterns
-3. Compliance checks: correct time window (business hours), daily frequency cap
-4. Nudge generator creates contextual prompt (e.g., "Safety topic reminder")
-5. Call Claude API with worker's trade, recent hazards, engagement level
-6. Send via Twilio, log in message_log with status tracking
+### Document-Grounded Coaching Model
+1. Worker observation keywords extracted (with Spanish → English expansion)
+2. `retrieve_relevant_documents()` searches safety_documents table by keyword match
+3. Matched documents injected into system prompt as context
+4. AI selects one of 3 response modes:
+   - **ACKNOWLEDGE + REFERENCE**: Documents match → quote with attribution + reflective question
+   - **ACKNOWLEDGE + REFLECT**: No match → honest about gap + reflective question
+   - **ACKNOWLEDGE + CONNECT**: Trade mismatch → connect to worker's context + question
+5. Assessment metadata returned invisibly (response_mode, hazard_category, specificity, etc.)
 
-### Feedback Loop (Toolbox Talks)
-1. Observations aggregated per project (daily/weekly)
-2. Toolbox talk generator queries top hazard categories by severity
-3. Call Claude API to synthesize observations into toolbox talk content
-4. Create toolbox_talks record with source observation IDs
-5. Send prompt to foreman via SMS or portal notification
-6. Foreman acknowledges delivery, conducts talk with crew
-7. Workers confirm attendance via SMS callback
-8. engagement_metrics updated with loop_closures count
+### Multi-Turn Conversation Flow
+- Sessions resume within 4 hours of last message
+- After 4 hours of silence, new session starts
+- Thread history (last 6 turns) included in prompt for context
+- Worker tier (1-4) adapts coaching depth invisibly
 
-## Database Schema
+## Database Schema (Current — 14+ tables)
 
 ```
 companies
   id (PK), name, standards_config (JSON), created_at
 
 projects
-  id (PK), company_id (FK), name, location, active, created_at
+  id (PK), company_id (FK), name, location, description, active, created_at
 
 workers
   id (PK), phone_number (hashed SHA256), company_id (FK), project_id (FK),
   trade, experience_level (entry/intermediate/expert),
-  preferred_language (en/es, default en), created_at
+  preferred_language (en/es), first_name, active_project_id, created_at
 
 consent_records
-  id (PK), phone_number (hashed), consent_type (sms_coaching),
-  consent_method (double_opt_in), consented_at, revoked_at, is_active,
-  ip_address, created_at
+  id (PK), phone_number (hashed), consent_type, consent_method,
+  consented_at, revoked_at, is_active, ip_address, created_at
 
 observations
-  id (PK), worker_id (FK nullable), project_id (FK), raw_text,
-  hazard_category (enum), severity (1-5), trade_context, language (en/es),
-  ai_analysis (JSON), created_at
+  id (PK), worker_id (FK nullable), project_id (FK), session_id (FK),
+  raw_text, hazard_category, severity, trade_context, language,
+  media_urls (JSON), ai_analysis (JSON), created_at
 
 coaching_responses
-  id (PK), observation_id (FK), response_mode (alert/validate/nudge/probe/affirm),
-  response_text, twilio_sid, sent_at, status
+  id (PK), observation_id (FK), response_mode (reference/reflect/connect),
+  response_text, message_sid, sent_at, status
 
-toolbox_talks
-  id (PK), project_id (FK), title, content, source_observations (int[]),
-  generated_at, delivered_at, delivery_status
+coaching_sessions
+  id (PK), worker_id (FK), phone_hash, started_at, ended_at,
+  turn_count, focus_area, coaching_direction, session_sentiment,
+  worker_tier_at_time, response_modes_used (JSON), media_urls (JSON),
+  hazard_identified, hazard_category, teachable_moment, session_closed
 
-foreman_prompts
-  id (PK), foreman_worker_id (FK), toolbox_talk_id (FK), prompt_text,
-  context_notes, created_at, acknowledged_at
+worker_profiles
+  id (PK), phone_hash (unique), tier, progression_markers (JSON),
+  mentor_notes (JSON), document_exposure (JSON), baseline_complete,
+  total_interactions, last_interaction_at
 
-engagement_metrics
-  id (PK), worker_id (FK), observation_count, response_rate (0-1),
-  loop_closures, engagement_score (0-100), period_start, period_end
+interaction_assessments
+  id (PK), session_id (FK), turn_number, response_mode,
+  specificity_score, worker_engagement, worker_confidence,
+  photo_present, question_asked, teachable_moment
+
+safety_documents
+  id (PK), project_id (FK nullable), title, content, category,
+  section_label, trade_tags (JSON), hazard_tags (JSON),
+  source_attribution, language, created_at
+
+document_references
+  id (PK), phone_hash, session_id (FK), document_id (FK),
+  observation_id (FK), created_at
 
 message_log
   id (PK), phone_number (hashed), direction (inbound/outbound),
-  message_type (observation/nudge/toolbox_talk/acknowledgment),
-  twilio_sid, content_preview, sent_at, delivery_status
+  message_type, message_sid, content_preview, sent_at, delivery_status
 ```
 
 ## API Routes
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/sms/inbound` | POST | Twilio webhook for incoming SMS |
-| `/api/sms/status` | POST | Twilio delivery status callback |
-| `/api/portal/dashboard` | GET | Admin dashboard main view |
-| `/api/portal/observations` | GET | Observation feed with filtering/sorting |
-| `/api/portal/toolbox-talk` | POST | Generate toolbox talk from observations |
-| `/api/portal/engagement` | GET | Engagement metrics and Safety Engagement Score |
-| `/api/portal/company` | POST | Create/update company standards config |
-| `/api/portal/project` | POST/GET | Project CRUD operations |
-| `/api/portal/consent` | GET | View consent records for compliance audit |
-| `/api/health` | GET | Health check (database, Twilio, Claude API) |
+| `/api/sms/inbound` | POST | Telnyx webhook for incoming SMS/MMS |
+| `/api/health` | GET | Health check (database, API connectivity) |
+| `/api/documents/upload` | POST | Upload and chunk a safety document |
+| `/api/documents/search` | POST | Search documents by keyword |
+| `/api/documents/list` | GET | List all ingested documents |
+| `/api/test/simulate` | POST | Console: simulate worker message |
+| `/api/test/conversations` | GET | Console: list recent conversations |
+| `/api/test/stats` | GET | Console: coaching stats |
+| `/api/training/photos` | GET | Training: list analyzed photos |
+| `/api/training/converse` | POST | Training: send message through coaching engine |
+| `/console` | GET | Dev-only SMS test console (HTML) |
+| `/training` | GET | Dev-only training review interface (HTML) |
 
-All endpoints require Bearer token authentication (JWT). Twilio inbound/status endpoints use signature verification instead.
+Telnyx inbound uses ed25519 signature verification. Console/training endpoints are dev-only (disabled in production unless DEMO_MODE=true).
 
 ## Coaching Engine Architecture
 
-Core product logic. Sits between inbound SMS and Twilio response:
+Core product logic in `backend/coaching/`:
 
-1. **Parse**: Extract text, sender phone_number, timestamp from Twilio webhook
-2. **Classify**: Is this observation/question/opt-in/opt-out? Use Claude classifier
-3. **Context**: Fetch worker trade, experience level, company standards from DB
-4. **Detect**: Hazard category, severity, relevance to worker's trade
-5. **Select Mode**: Choose response type based on observation context
-   - Alert: Critical hazard (severity 5) — urgent, direct language
-   - Validate: Confirms observation, reinforces correct behavior
-   - Nudge: Questions worker's decision, gentle redirection
-   - Probe: Asks for more info, deepens reflection
-   - Affirm: Positive reinforcement for safe behavior
-6. **Build Prompt**: System prompt + worker context + recent observation patterns
-7. **Call Claude**: `messages.create()` with coaching system prompt, max_tokens=200
-8. **Validate Response**: Length (≤160 chars per SMS segment), tone check, no PII
-9. **Send**: Async task to Twilio Messaging Service, track in message_log
-
-### Coaching System Prompt Template
-```
-You are a behavioral safety coach for construction workers. Respond in 160 characters max, conversational tone.
-Worker: {trade}, {experience_level}
-Company Standards: {standards_config}
-Recent observations: {last_5_observations}
-Respond in {response_mode} mode to: {observation_text}
-```
+1. **Parse**: Extract phone, message text, media URLs from Telnyx JSON webhook
+2. **Context**: Fetch or create worker profile, get trade/tier/language
+3. **Session**: Resume existing session (< 4 hours) or start new one
+4. **Retrieve**: Search safety_documents for relevant content via keyword matching
+5. **Build Prompt**: Assemble document-grounded system prompt with:
+   - Identity block (resource assistant, not expert)
+   - Worker context (trade, tier, language, project)
+   - Document context (matched sections with attribution)
+   - Brevity rules (25-40 words, 380 chars max)
+   - Response mode guidance (reference/reflect/connect)
+   - Question mandate (3:1 ratio)
+   - Assessment output format (JSON after `|||`)
+6. **Call Claude**: Haiku, temperature 0.3, max_tokens 500
+7. **Parse Response**: Split coaching text from assessment JSON on `|||`
+8. **Truncate**: Sentence-boundary truncation if > 380 chars
+9. **Persist**: Save coaching response, assessment, update session + profile
 
 ## Security & Privacy
 
-- **Phone Hashing**: SHA256(phone_number + SALT) for anonymous reporting
-- **Encryption**: PostgreSQL TDE at rest, TLS 1.3 in transit
+- **Phone Hashing**: SHA256(phone_number + configurable SALT) for anonymous reporting
 - **Consent Immutability**: Soft delete only (set revoked_at), never hard delete
 - **Retention**: 5-year consent record retention (TCPA compliance)
 - **No PII Logs**: All logs sanitized, phone_numbers masked
-- **Rate Limiting**: 10 req/min per IP on public endpoints, 100 req/min per worker
-- **Twilio Validation**: Signature verification on all inbound webhooks
-- **DB Access**: Row-level security on observations (workers see only their own)
+- **Rate Limiting**: 5 messages/phone/day, 8am-9pm sending window
+- **Telnyx Validation**: ed25519 signature verification on inbound webhooks (requires PyNaCl)
+- **Secrets**: All sensitive values via environment variables, never in code
 
 ## Environment Variables
 
 ```
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
-TWILIO_MESSAGING_SERVICE_SID=MG...
+ENVIRONMENT=development|production
+SECRET_KEY=<random-string>
+PHONE_HASH_SALT=<random-string>
+DATABASE_URL=sqlite:///safety_as_a_contact.db  # or postgresql://...
 ANTHROPIC_API_KEY=sk-ant-...
-DATABASE_URL=postgresql://user:pass@host/dbname
-SECRET_KEY=...
-JWT_SECRET=...
-ENVIRONMENT=development|staging|production
+TELNYX_API_KEY=KEY...
+TELNYX_PHONE_NUMBER=+18013163196
+TELNYX_MESSAGING_PROFILE_ID=<uuid>
+TELNYX_PUBLIC_KEY=<base64-ed25519-public-key>
+DEMO_MODE=false
 LOG_LEVEL=INFO
+MAX_MESSAGES_PER_PHONE_PER_DAY=5
+SENDING_WINDOW_START=8
+SENDING_WINDOW_END=21
+SESSION_PAUSE_MINUTES=30
+SESSION_TIMEOUT_MINUTES=240
 ```
 
 ## Data Flow Diagrams (Text)
 
 **Worker Observation Flow**:
-Worker → SMS → Twilio → Webhook Handler → Consent Validation → Coaching Engine → Claude API (coaching prompt) → Response Validation → Twilio Send → Worker SMS
+Worker → SMS → Telnyx → Webhook Handler → Consent Validation → Document Retrieval → Coaching Engine → Claude Haiku → Response Parsing + Truncation → Telnyx Send → Worker SMS
 
-**Feedback Loop (Toolbox Talks)**:
-Daily Aggregation → Top Hazards Per Project → Claude API (synthesis prompt) → Toolbox Talk Record → Foreman SMS/Portal → Foreman Delivery → Worker Confirmation SMS → engagement_metrics.loop_closures++
+**Document Ingestion Flow**:
+PDF → PyMuPDF Extraction → Header/Footer Stripping → Section Splitting → Hazard Tag Auto-Detection → safety_documents Table → Available for Retrieval
 
-**Proactive Nudge Flow**:
-Scheduler (24h interval) → Worker Context Lookup (trade, recent obs) → Compliance Check (consent active, time window, frequency cap) → Nudge Generator → Claude API (nudge prompt) → Twilio Send → Async Status Tracking
+**Evaluation Pipeline Flow**:
+Worker AI (Haiku) → Coaching AI (Haiku, under test) → 4 Per-Response Evaluators (Haiku) → Arc Evaluator (Sonnet) → Quality Gate (6 categories) → Report
 
-## Development Priorities
+## Headless Evaluation Pipeline
 
-1. Inbound SMS handler + Coaching engine (core loop)
-2. Consent management + TCPA compliance
-3. Claude integration with response validation
-4. Admin portal observations feed
-5. Toolbox talk generation + foreman workflow
-6. Engagement metrics calculation
-7. Proactive nudge scheduler
+Located in `training/`. Runs coaching engine against simulated workers to measure quality:
+
+- **5 Personas**: Miguel (ES/laborer), Jake (EN/ironworker), Ray (EN/operator), Carlos (ES/bilingual), Diana (EN/apprentice)
+- **7 Independent Agents**: Worker AI, Coaching AI (product under test), Response Eval, Hazard Eval, Behavioral Eval, Authenticity Eval, Arc Eval
+- **Quality Gate**: 6 categories with pass/fail/warn thresholds
+- **CLI**: `python -m training gate --sessions 10 --prompt-version "v1.0"`
+- **Reports**: JSON + terminal output, saved to `training_reports/`
