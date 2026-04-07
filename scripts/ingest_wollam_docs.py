@@ -122,6 +122,11 @@ def main():
         default=str(PROJECT_ROOT / "data" / "wollam_docs.db"),
         help="SQLite database path (default: project/data/wollam_docs.db)",
     )
+    parser.add_argument(
+        "--use-env-db",
+        action="store_true",
+        help="Use DATABASE_URL from environment instead of --db-path (for PostgreSQL)",
+    )
     args = parser.parse_args()
 
     # Verify PDFs exist
@@ -129,16 +134,6 @@ def main():
         if not pdf.exists():
             print(f"  ERROR: PDF not found: {pdf}")
             sys.exit(1)
-
-    # Set up database
-    db_path = Path(args.db_path)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
-    # Force settings to reload with new DATABASE_URL
-    from backend.config import Settings
-    settings = Settings()
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -150,10 +145,27 @@ def main():
         WOLLAM_HEADER_PATTERN,
     )
 
-    engine = create_engine(
-        f"sqlite:///{db_path}",
-        connect_args={"check_same_thread": False},
-    )
+    # Set up database — either from env var or SQLite path
+    if args.use_env_db:
+        db_url = os.environ.get("DATABASE_URL", "")
+        if not db_url:
+            print("  ERROR: --use-env-db requires DATABASE_URL environment variable")
+            sys.exit(1)
+        engine = create_engine(db_url, pool_pre_ping=True)
+        db_label = db_url.split("@")[-1].split("/")[0] if "@" in db_url else db_url
+    else:
+        db_path = Path(args.db_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+        from backend.config import Settings
+        settings = Settings()
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+        )
+        db_label = str(db_path)
+
     Base.metadata.create_all(bind=engine)
     SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     db = SessionLocal()
@@ -162,7 +174,7 @@ def main():
     print("=" * 60)
     print("  Wollam Safety Document Ingestion")
     print("=" * 60)
-    print(f"  Database: {db_path}")
+    print(f"  Database: {db_label}")
     print()
 
     # ── Company ──
@@ -263,7 +275,7 @@ def main():
     print(f"  Total documents in database: {total}")
     print(f"    Wollam Safety Program: {len(wollam_docs)} sections")
     print(f"    Valar Ward 250 SSSP:  {len(valar_docs)} sections")
-    print(f"  Database: {db_path}")
+    print(f"  Database: {db_label}")
     print()
 
     db.close()
