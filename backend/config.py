@@ -12,11 +12,11 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:///safety_as_a_contact.db"
 
-    # Twilio
-    twilio_account_sid: str = ""
-    twilio_auth_token: str = ""
-    twilio_phone_number: str = ""
-    twilio_messaging_service_sid: str = ""
+    # Telnyx
+    telnyx_api_key: str = ""
+    telnyx_phone_number: str = ""
+    telnyx_messaging_profile_id: str = ""
+    telnyx_public_key: str = ""  # For webhook signature verification
 
     # Anthropic
     anthropic_api_key: str = ""

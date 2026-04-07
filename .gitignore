@@ -23,7 +23,11 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.coverage
 
 # Database
 *.db
 *.sqlite3
+
+# Training reports (generated output)
+training_reports/

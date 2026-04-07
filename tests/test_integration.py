@@ -4,15 +4,28 @@ from backend.models import ConsentRecord, MessageLog, hash_phone
 from tests.conftest import TEST_PHONE
 
 
+def _telnyx_payload(phone: str, text: str, message_id: str = "msg_int_001"):
+    """Build a Telnyx webhook JSON payload."""
+    return {
+        "data": {
+            "event_type": "message.received",
+            "payload": {
+                "from": {"phone_number": phone},
+                "text": text,
+                "id": message_id,
+                "media": [],
+            },
+        }
+    }
+
+
 def test_full_optin_flow(client, db):
     """New number → consent request → YES → confirmed → observation → ack."""
     phone = "+18015559999"
     ph = hash_phone(phone)
 
     # Step 1: New number texts in
-    resp = client.post("/api/sms/inbound", data={
-        "From": phone, "Body": "Hi there", "MessageSid": "SM_int_001",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(phone, "Hi there", "msg_int_001"))
     assert resp.status_code == 200
 
     # Should have pending consent + outbound consent request
@@ -21,9 +34,7 @@ def test_full_optin_flow(client, db):
     assert cr.is_active is False
 
     # Step 2: Worker replies YES
-    resp = client.post("/api/sms/inbound", data={
-        "From": phone, "Body": "YES", "MessageSid": "SM_int_002",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(phone, "YES", "msg_int_002"))
     assert resp.status_code == 200
 
     # Consent should now be active
@@ -31,10 +42,9 @@ def test_full_optin_flow(client, db):
     assert cr.is_active is True
 
     # Step 3: Worker sends an observation
-    resp = client.post("/api/sms/inbound", data={
-        "From": phone, "Body": "Scaffolding missing guardrails on level 3",
-        "MessageSid": "SM_int_003",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(
+        phone, "Scaffolding missing guardrails on level 3", "msg_int_003"
+    ))
     assert resp.status_code == 200
 
     # Observation should be logged
@@ -61,9 +71,7 @@ def test_full_optout_flow(client, db):
     db.commit()
 
     # Step 1: Worker opts out
-    resp = client.post("/api/sms/inbound", data={
-        "From": phone, "Body": "STOP", "MessageSid": "SM_int_004",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(phone, "STOP", "msg_int_004"))
     assert resp.status_code == 200
 
     db.refresh(cr)
@@ -71,15 +79,13 @@ def test_full_optout_flow(client, db):
     assert cr.revoked_at is not None
 
     # Step 2: Worker texts again — should get new consent request
-    resp = client.post("/api/sms/inbound", data={
-        "From": phone, "Body": "Hey I want back in", "MessageSid": "SM_int_005",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(
+        phone, "Hey I want back in", "msg_int_005"
+    ))
     assert resp.status_code == 200
 
     # Step 3: Worker says START
-    resp = client.post("/api/sms/inbound", data={
-        "From": phone, "Body": "start", "MessageSid": "SM_int_006",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(phone, "start", "msg_int_006"))
     assert resp.status_code == 200
 
     db.refresh(cr)
@@ -102,9 +108,9 @@ def test_opt_out_case_insensitive(client, db):
         db.add(cr)
         db.commit()
 
-        resp = client.post("/api/sms/inbound", data={
-            "From": phone, "Body": keyword, "MessageSid": f"SM_kw_{keyword}",
-        })
+        resp = client.post("/api/sms/inbound", json=_telnyx_payload(
+            phone, keyword, f"msg_kw_{keyword}"
+        ))
         assert resp.status_code == 200
 
         db.refresh(cr)
@@ -117,9 +123,9 @@ def test_message_log_audit_trail(client, db):
     ph = hash_phone(phone)
 
     # 3 interactions: new contact, YES, observation
-    client.post("/api/sms/inbound", data={"From": phone, "Body": "hi", "MessageSid": "SM_a1"})
-    client.post("/api/sms/inbound", data={"From": phone, "Body": "YES", "MessageSid": "SM_a2"})
-    client.post("/api/sms/inbound", data={"From": phone, "Body": "No hard hat zone B", "MessageSid": "SM_a3"})
+    client.post("/api/sms/inbound", json=_telnyx_payload(phone, "hi", "msg_a1"))
+    client.post("/api/sms/inbound", json=_telnyx_payload(phone, "YES", "msg_a2"))
+    client.post("/api/sms/inbound", json=_telnyx_payload(phone, "No hard hat zone B", "msg_a3"))
 
     logs = db.query(MessageLog).filter(MessageLog.phone_hash == ph).all()
     # 3 inbound guaranteed; outbound may be blocked by sending window

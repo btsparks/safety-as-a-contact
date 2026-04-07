@@ -5,13 +5,24 @@ from backend.sms.consent import create_consent
 from tests.conftest import TEST_PHONE, TEST_PHONE_2
 
 
+def _telnyx_payload(phone: str, text: str, message_id: str = "msg_test_001", media: list | None = None):
+    """Build a Telnyx webhook JSON payload."""
+    return {
+        "data": {
+            "event_type": "message.received",
+            "payload": {
+                "from": {"phone_number": phone},
+                "text": text,
+                "id": message_id,
+                "media": media or [],
+            },
+        }
+    }
+
+
 def test_inbound_opt_out(client, db, seed_consent):
     """STOP keyword should revoke consent and send confirmation."""
-    resp = client.post("/api/sms/inbound", data={
-        "From": TEST_PHONE,
-        "Body": "STOP",
-        "MessageSid": "SM_test_001",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(TEST_PHONE, "STOP"))
     assert resp.status_code == 200
 
     # Expire cached objects so we see handler's changes
@@ -35,11 +46,7 @@ def test_inbound_opt_out(client, db, seed_consent):
 
 def test_inbound_new_number_triggers_double_optin(client, db):
     """First message from unknown number should trigger consent request."""
-    resp = client.post("/api/sms/inbound", data={
-        "From": TEST_PHONE_2,
-        "Body": "Hello there",
-        "MessageSid": "SM_test_002",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(TEST_PHONE_2, "Hello there"))
     assert resp.status_code == 200
 
     # Should create an inactive consent record (pending)
@@ -70,11 +77,7 @@ def test_inbound_yes_activates_consent(client, db):
     db.add(cr)
     db.commit()
 
-    resp = client.post("/api/sms/inbound", data={
-        "From": TEST_PHONE_2,
-        "Body": "YES",
-        "MessageSid": "SM_test_003",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(TEST_PHONE_2, "YES"))
     assert resp.status_code == 200
 
     # Expire cached objects so we see handler's changes
@@ -89,11 +92,9 @@ def test_inbound_yes_activates_consent(client, db):
 
 def test_inbound_observation_with_consent(client, db, seed_consent):
     """Message from consented number should create observation + coaching response."""
-    resp = client.post("/api/sms/inbound", data={
-        "From": TEST_PHONE,
-        "Body": "Saw exposed rebar near the south entrance",
-        "MessageSid": "SM_test_004",
-    })
+    resp = client.post("/api/sms/inbound", json=_telnyx_payload(
+        TEST_PHONE, "Saw exposed rebar near the south entrance"
+    ))
     assert resp.status_code == 200
 
     # Expire cached objects so we see handler's changes
@@ -134,6 +135,30 @@ def test_inbound_observation_with_consent(client, db, seed_consent):
 
 
 def test_inbound_empty_phone(client):
-    """Request with no From should return empty TwiML."""
-    resp = client.post("/api/sms/inbound", data={"Body": "hello"})
+    """Request with no phone should return ignored."""
+    payload = {
+        "data": {
+            "event_type": "message.received",
+            "payload": {
+                "from": {"phone_number": ""},
+                "text": "hello",
+                "id": "msg_test_empty",
+                "media": [],
+            },
+        }
+    }
+    resp = client.post("/api/sms/inbound", json=payload)
     assert resp.status_code == 200
+
+
+def test_inbound_non_message_event_ignored(client):
+    """Non-message.received events should be ignored."""
+    payload = {
+        "data": {
+            "event_type": "message.sent",
+            "payload": {},
+        }
+    }
+    resp = client.post("/api/sms/inbound", json=payload)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ignored"

@@ -257,7 +257,7 @@ class TestRunCoaching:
 
     def test_photo_observation_with_media_urls(self, db):
         """run_coaching should pass media_urls through."""
-        urls = ["https://api.twilio.com/media/test.jpg"]
+        urls = ["https://example.com/media/test.jpg"]
         result = run_coaching(
             db, "Check this", media_urls=urls, phone_hash=hash_phone(TEST_PHONE),
         )

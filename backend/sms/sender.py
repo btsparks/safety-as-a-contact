@@ -1,7 +1,11 @@
-"""Outbound SMS sender with compliance checks."""
+"""Outbound SMS sender with compliance checks.
+
+Uses Telnyx REST API directly via httpx (no SDK dependency).
+"""
 
 import logging
 
+import httpx
 from sqlalchemy.orm import Session
 
 from backend.config import settings
@@ -10,6 +14,8 @@ from backend.sms.compliance import validate_outbound_message
 from backend.sms.consent import verify_consent
 
 logger = logging.getLogger(__name__)
+
+TELNYX_API_URL = "https://api.telnyx.com/v2/messages"
 
 
 def send_sms(
@@ -31,7 +37,7 @@ def send_sms(
         hour: Override hour for sending window check (testing).
 
     Returns:
-        dict with status and optional twilio_sid or error.
+        dict with status and optional message_sid or error.
     """
     ph = hash_phone(to_phone)
 
@@ -48,26 +54,35 @@ def send_sms(
             logger.warning("Blocked send to phone_hash=%s — %s", ph[:12], reason)
             return {"status": "blocked", "reason": reason}
 
-    # Send via Twilio (or log-only in dev without credentials)
-    twilio_sid = ""
+    # Send via Telnyx REST API (or log-only in dev without credentials)
+    message_sid = ""
     status = "sent"
 
-    if settings.twilio_account_sid and settings.twilio_auth_token:
+    if settings.telnyx_api_key:
         try:
-            from twilio.rest import Client
+            payload = {
+                "from": settings.telnyx_phone_number,
+                "to": to_phone,
+                "text": body,
+            }
+            if settings.telnyx_messaging_profile_id:
+                payload["messaging_profile_id"] = settings.telnyx_messaging_profile_id
 
-            client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
-            kwargs = {"body": body, "to": to_phone}
-            if settings.twilio_messaging_service_sid:
-                kwargs["messaging_service_sid"] = settings.twilio_messaging_service_sid
-            else:
-                kwargs["from_"] = settings.twilio_phone_number
-
-            message = client.messages.create(**kwargs)
-            twilio_sid = message.sid
-            logger.info("SMS sent to phone_hash=%s, sid=%s", ph[:12], twilio_sid)
+            resp = httpx.post(
+                TELNYX_API_URL,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {settings.telnyx_api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=10.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            message_sid = data.get("data", {}).get("id", "")
+            logger.info("SMS sent to phone_hash=%s, sid=%s", ph[:12], message_sid)
         except Exception as e:
-            logger.error("Twilio send failed for phone_hash=%s: %s", ph[:12], str(e))
+            logger.error("Telnyx send failed for phone_hash=%s: %s", ph[:12], str(e))
             status = "failed"
     else:
         logger.info("DEV MODE — SMS logged (not sent) to phone_hash=%s: %s", ph[:12], body[:80])
@@ -77,11 +92,11 @@ def send_sms(
         phone_hash=ph,
         direction="outbound",
         message_type=message_type,
-        twilio_sid=twilio_sid,
+        twilio_sid=message_sid,  # Column name kept for migration compat; stores Telnyx ID
         content_preview=body[:160],
         status=status,
     )
     db.add(log)
     db.commit()
 
-    return {"status": status, "twilio_sid": twilio_sid}
+    return {"status": status, "message_sid": message_sid}

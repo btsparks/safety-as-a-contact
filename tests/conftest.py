@@ -6,8 +6,7 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///test_safety.db"
 os.environ["ENVIRONMENT"] = "development"
 os.environ["PHONE_HASH_SALT"] = "test-salt"
-os.environ["TWILIO_ACCOUNT_SID"] = ""
-os.environ["TWILIO_AUTH_TOKEN"] = ""
+os.environ["TELNYX_API_KEY"] = ""
 os.environ["ANTHROPIC_API_KEY"] = ""  # Force mock mode in tests
 
 import pytest

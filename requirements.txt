@@ -7,11 +7,13 @@ pydantic-settings==2.5.0
 sqlalchemy==2.0.35
 psycopg2-binary==2.9.10
 
-# SMS
-twilio==9.3.0
+# SMS (Telnyx REST API via httpx — no SDK dependency)
 
 # AI
 anthropic>=0.40.0
+
+# PDF extraction
+PyMuPDF>=1.24.0
 
 # Templates
 jinja2>=3.1.0

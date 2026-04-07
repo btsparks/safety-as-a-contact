@@ -172,7 +172,7 @@ class MessageLog(Base):
     phone_hash = Column(String(64), nullable=False, index=True)
     direction = Column(String(10), nullable=False)  # inbound / outbound
     message_type = Column(String(30))  # observation, consent, opt_out, coaching, system
-    twilio_sid = Column(String(50))
+    twilio_sid = Column(String(50))  # Provider message ID (Twilio or Telnyx)
     content_preview = Column(String(160))  # first 160 chars only
     status = Column(String(20), default="sent")  # sent, delivered, failed
     created_at = Column(DateTime, default=utcnow)
