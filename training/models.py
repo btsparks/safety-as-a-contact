@@ -1,4 +1,4 @@
-"""Training harness models — 5 tables in training.db."""
+"""Training harness models — 7 tables in training.db."""
 
 from datetime import datetime, timezone
 
@@ -141,4 +141,87 @@ class BenchmarkResult(TrainingBase):
 
     __table_args__ = (
         Index("ix_br_run_photo", "run_id", "photo_id"),
+    )
+
+
+class SimulationRun(TrainingBase):
+    """One complete longitudinal simulation for a persona."""
+    __tablename__ = "simulation_run"
+
+    id = Column(Integer, primary_key=True)
+    persona_key = Column(String(50), nullable=False, index=True)
+    persona_name = Column(String(100), nullable=False)
+    num_sessions = Column(Integer, default=10)
+    turns_per_session = Column(Integer, default=4)
+    tier_progression = Column(Text)  # JSON list of ints
+    mentor_notes_history = Column(Text)  # JSON list of strings
+    final_profile = Column(Text)  # JSON dict
+    started_at = Column(DateTime, default=utcnow)
+    finished_at = Column(DateTime, nullable=True)
+    elapsed_seconds = Column(Float, default=0.0)
+    notes = Column(Text, nullable=True)
+
+    simulation_sessions = relationship("SimulationSession", back_populates="run")
+
+
+class SimulationSession(TrainingBase):
+    """One session within a simulation run — stores transcript and tier data."""
+    __tablename__ = "simulation_session"
+
+    id = Column(Integer, primary_key=True)
+    run_id = Column(Integer, ForeignKey("simulation_run.id"), nullable=False, index=True)
+    session_number = Column(Integer, nullable=False)
+    photo_id = Column(Integer, nullable=True)
+    tier_at_start = Column(Integer, default=1)
+    tier_at_end = Column(Integer, default=1)
+    mentor_notes = Column(Text, nullable=True)
+    transcript = Column(Text)  # JSON list of turn dicts
+    created_at = Column(DateTime, default=utcnow)
+
+    run = relationship("SimulationRun", back_populates="simulation_sessions")
+
+
+# --- Evaluation pipeline tables ---
+
+
+class EvaluationRun(TrainingBase):
+    """One complete evaluation pass (simulation + all evaluator passes)."""
+    __tablename__ = "evaluation_run"
+
+    id = Column(Integer, primary_key=True)
+    simulation_run_id = Column(Integer, ForeignKey("simulation_run.id"), nullable=True)
+    prompt_version_id = Column(Integer, ForeignKey("prompt_version.id"), nullable=True)
+    prompt_version_label = Column(String(100), nullable=True)
+    persona_key = Column(String(50), nullable=False)
+    persona_name = Column(String(100), nullable=False)
+    num_sessions = Column(Integer, default=0)
+    num_responses_evaluated = Column(Integer, default=0)
+    overall_status = Column(String(20), nullable=True)  # PASS/FAIL/CONDITIONAL_PASS
+    overall_diagnosis = Column(Text, nullable=True)
+    report_json = Column(Text, nullable=True)  # Full QualityGateReport serialized
+    started_at = Column(DateTime, default=utcnow)
+    finished_at = Column(DateTime, nullable=True)
+    elapsed_seconds = Column(Float, default=0.0)
+
+    scores = relationship("EvaluationScore", back_populates="evaluation_run")
+
+
+class EvaluationScore(TrainingBase):
+    """Individual evaluator score for one response or session."""
+    __tablename__ = "evaluation_score"
+
+    id = Column(Integer, primary_key=True)
+    evaluation_run_id = Column(Integer, ForeignKey("evaluation_run.id"), nullable=False, index=True)
+    evaluator_name = Column(String(50), nullable=False)  # response/hazard/behavioral/authenticity/arc
+    session_number = Column(Integer, nullable=True)
+    turn_number = Column(Integer, nullable=True)
+    scores_json = Column(Text, nullable=False)  # JSON dict of score name → value
+    pass_fail_json = Column(Text, nullable=True)  # JSON dict of check name → bool
+    diagnosis = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    evaluation_run = relationship("EvaluationRun", back_populates="scores")
+
+    __table_args__ = (
+        Index("ix_es_run_evaluator", "evaluation_run_id", "evaluator_name"),
     )

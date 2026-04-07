@@ -1,4 +1,5 @@
-"""Training review API — browse analyzed photos, run live conversations, rate responses.
+"""Training review API — browse analyzed photos, run live conversations, rate responses,
+and run longitudinal persona simulations.
 
 All conversations go through the real coaching engine with sessions, profiles,
 and thread history. This is NOT a mock — it exercises the full pipeline.
@@ -7,6 +8,7 @@ and thread history. This is NOT a mock — it exercises the full pipeline.
 import json
 import logging
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse, JSONResponse
@@ -350,3 +352,245 @@ def get_benchmark_response(photo_id: int):
     }
     tdb.close()
     return JSONResponse(content={"benchmark": data})
+
+
+# ---- Persona & Simulation Endpoints ----
+
+class SimulateRequest(BaseModel):
+    persona: str
+    num_sessions: int = 10
+    turns_per_session: int = 4
+
+
+@router.get("/personas")
+def list_personas_endpoint():
+    """List all available test personas."""
+    from training.personas import list_personas
+    return JSONResponse(content={"personas": list_personas()})
+
+
+@router.post("/simulate")
+def run_simulation_endpoint(req: SimulateRequest, db: DBSession = Depends(get_db)):
+    """Run a longitudinal simulation for a persona. Returns full report."""
+    from training.personas import get_persona
+    from training.simulator import run_simulation
+
+    persona = get_persona(req.persona)
+    if not persona:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Persona '{req.persona}' not found"},
+        )
+
+    logger.info(
+        "Starting simulation: %s (%d sessions, %d turns/session)",
+        persona.name,
+        req.num_sessions,
+        req.turns_per_session,
+    )
+
+    report = run_simulation(
+        db=db,
+        persona=persona,
+        num_sessions=req.num_sessions,
+        turns_per_session=req.turns_per_session,
+    )
+
+    # Persist to training DB
+    _save_simulation_report(report)
+
+    return JSONResponse(content=report.to_dict())
+
+
+@router.get("/simulations")
+def list_simulations():
+    """List all simulation runs with summary data."""
+    tdb = _get_training_db()
+    from training.models import SimulationRun
+
+    runs = (
+        tdb.query(SimulationRun)
+        .order_by(SimulationRun.started_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    result = []
+    for run in runs:
+        tier_prog = []
+        try:
+            tier_prog = json.loads(run.tier_progression or "[]")
+        except json.JSONDecodeError:
+            pass
+
+        result.append({
+            "id": run.id,
+            "persona_key": run.persona_key,
+            "persona_name": run.persona_name,
+            "num_sessions": run.num_sessions,
+            "turns_per_session": run.turns_per_session,
+            "tier_progression": tier_prog,
+            "elapsed_seconds": run.elapsed_seconds,
+            "started_at": run.started_at.isoformat() if run.started_at else None,
+            "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        })
+
+    tdb.close()
+    return JSONResponse(content={"simulations": result})
+
+
+@router.get("/simulation/{run_id}")
+def get_simulation(run_id: int):
+    """Get full simulation detail including session transcripts."""
+    tdb = _get_training_db()
+    from training.models import SimulationRun, SimulationSession
+
+    run = tdb.query(SimulationRun).get(run_id)
+    if not run:
+        tdb.close()
+        return JSONResponse(status_code=404, content={"error": "Simulation not found"})
+
+    sessions = (
+        tdb.query(SimulationSession)
+        .filter(SimulationSession.run_id == run_id)
+        .order_by(SimulationSession.session_number.asc())
+        .all()
+    )
+
+    tier_prog = []
+    try:
+        tier_prog = json.loads(run.tier_progression or "[]")
+    except json.JSONDecodeError:
+        pass
+
+    notes_history = []
+    try:
+        notes_history = json.loads(run.mentor_notes_history or "[]")
+    except json.JSONDecodeError:
+        pass
+
+    final_profile = {}
+    try:
+        final_profile = json.loads(run.final_profile or "{}")
+    except json.JSONDecodeError:
+        pass
+
+    session_data = []
+    for s in sessions:
+        transcript = []
+        try:
+            transcript = json.loads(s.transcript or "[]")
+        except json.JSONDecodeError:
+            pass
+
+        session_data.append({
+            "session_number": s.session_number,
+            "photo_id": s.photo_id,
+            "tier_at_start": s.tier_at_start,
+            "tier_at_end": s.tier_at_end,
+            "mentor_notes": s.mentor_notes,
+            "turns": transcript,
+        })
+
+    data = {
+        "id": run.id,
+        "persona_key": run.persona_key,
+        "persona_name": run.persona_name,
+        "num_sessions": run.num_sessions,
+        "turns_per_session": run.turns_per_session,
+        "tier_progression": tier_prog,
+        "mentor_notes_history": notes_history,
+        "final_profile": final_profile,
+        "sessions": session_data,
+        "elapsed_seconds": run.elapsed_seconds,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+    }
+
+    tdb.close()
+    return JSONResponse(content=data)
+
+
+@router.get("/progression/{persona_key}")
+def get_persona_progression(persona_key: str):
+    """Get tier/profile/assessment history for a persona across all simulation runs."""
+    tdb = _get_training_db()
+    from training.models import SimulationRun
+
+    runs = (
+        tdb.query(SimulationRun)
+        .filter(SimulationRun.persona_key == persona_key)
+        .order_by(SimulationRun.started_at.asc())
+        .all()
+    )
+
+    history = []
+    for run in runs:
+        tier_prog = []
+        try:
+            tier_prog = json.loads(run.tier_progression or "[]")
+        except json.JSONDecodeError:
+            pass
+
+        final_profile = {}
+        try:
+            final_profile = json.loads(run.final_profile or "{}")
+        except json.JSONDecodeError:
+            pass
+
+        history.append({
+            "run_id": run.id,
+            "started_at": run.started_at.isoformat() if run.started_at else None,
+            "num_sessions": run.num_sessions,
+            "tier_progression": tier_prog,
+            "final_profile": final_profile,
+        })
+
+    tdb.close()
+    return JSONResponse(content={"persona_key": persona_key, "runs": history})
+
+
+def _save_simulation_report(report) -> None:
+    """Persist a simulation report to training.db."""
+    from training.db import TrainingSession, init_training_db
+    from training.models import SimulationRun, SimulationSession
+
+    init_training_db()
+    tdb = TrainingSession()
+
+    run = SimulationRun(
+        persona_key=report.persona_key,
+        persona_name=report.persona_name,
+        num_sessions=report.num_sessions,
+        turns_per_session=report.turns_per_session,
+        tier_progression=json.dumps(report.tier_progression),
+        mentor_notes_history=json.dumps(report.mentor_notes_history),
+        final_profile=json.dumps(report.final_profile),
+        elapsed_seconds=report.elapsed_seconds,
+    )
+
+    if report.finished_at:
+        from datetime import datetime
+        try:
+            run.finished_at = datetime.fromisoformat(report.finished_at)
+        except (ValueError, TypeError):
+            pass
+
+    tdb.add(run)
+    tdb.commit()
+    tdb.refresh(run)
+
+    for session in report.sessions:
+        sim_session = SimulationSession(
+            run_id=run.id,
+            session_number=session.session_number,
+            photo_id=session.photo_id,
+            tier_at_start=session.tier_at_start,
+            tier_at_end=session.tier_at_end,
+            mentor_notes=session.mentor_notes,
+            transcript=json.dumps(session.turns),
+        )
+        tdb.add(sim_session)
+
+    tdb.commit()
+    tdb.close()
