@@ -45,8 +45,8 @@ class SimulateRequest(BaseModel):
 
 
 def _dev_only_guard():
-    """Return 404 in production."""
-    if settings.is_production:
+    """Return 404 in production (unless demo mode is enabled)."""
+    if settings.is_production and not settings.demo_mode:
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     return None
 
